@@ -45,7 +45,7 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-st.set_page_config(page_title="Revolt Dashboard", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Revolt Data Cleaner", page_icon="⚡", layout="centered")
 
 # ====================================================
 # CSS Styling
@@ -54,36 +54,66 @@ st.markdown(
     """
     <style>
         .main { background-color: #f5f6f8; }
-        .block-container { max-width: 600px; margin: auto; }
+        .block-container { max-width: 700px; margin: auto; text-align: center; }
 
-        /* Buttons */
+        /* Upload Box */
+        div[data-testid="stFileUploader"] { margin: 0 auto; }
+
+        /* Run Button */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white; border: none; border-radius: 8px;
-            padding: 0.6em 1.2em; font-size: 15px; font-weight: 600;
+            padding: 0.7em 1.2em; font-size: 16px; font-weight: 600;
             margin-top: 15px; width: 100%;
         }
         div.stButton > button:first-child:hover {
             background: linear-gradient(90deg, #b0000d, #e30613);
         }
 
-        /* Downloads inline */
-        .downloads { display: flex; justify-content: center; gap: 12px; margin-top: 15px; flex-wrap: wrap; }
+        /* Results card */
+        .result-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        /* Download section */
+        .download-grid {
+            display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap;
+        }
+        .download-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            width: 180px; text-align: center;
+        }
+        .download-card img {
+            height: 40px; margin-bottom: 8px;
+        }
+        .download-card button {
+            width: 100%;
+        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # ====================================================
-# Logo (local file in repo)
+# Logo
 # ====================================================
 if os.path.exists("revolt_logo.png"):
     st.image("revolt_logo.png", width=150)
 else:
     st.write("⚠️ Add revolt_logo.png to repo root")
 
+st.markdown("### ⚡ Data Cleaning Dashboard")
+
 # ====================================================
-# Upload + Process
+# Upload
 # ====================================================
 uploaded_file = st.file_uploader("Upload Excel/CSV", type=["xlsx", "xls", "csv"])
 
@@ -108,25 +138,55 @@ if uploaded_file is not None:
             orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
             removed_rows = orig_rows - total_rows
 
-            st.success(
+            st.markdown(
                 f"""
-                ✅ **Processed:** {orig_rows} rows  
-                📤 **Cleaned File:** {total_rows} rows  
-                🚫 **Removed (blocklisted):** {removed_rows} rows  
-                📋 **Blocklist Update:** +{result['new_numbers']} new  
-                _(Now total: {len(load_blocklist())})_
-                """
+                <div class="result-box">
+                <h4>✅ Cleaning Complete</h4>
+                <ul>
+                    <li><b>Processed:</b> {orig_rows} rows</li>
+                    <li><b>Cleaned File:</b> {total_rows} rows</li>
+                    <li><b>Removed (blocklisted):</b> {removed_rows} rows</li>
+                    <li><b>Blocklist Update:</b> +{result['new_numbers']} new  
+                        (Now total: {len(load_blocklist())})</li>
+                </ul>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-            # Downloads
-            st.markdown('<div class="downloads">', unsafe_allow_html=True)
+            # ====================================================
+            # Downloads Section (with logos)
+            # ====================================================
+            st.markdown('<div class="download-grid">', unsafe_allow_html=True)
+
+            # Cleaned file
             with open(cleaned_output, "rb") as f:
-                st.download_button("⬇️ Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("cleaned_logo.png"):
+                    st.image("cleaned_logo.png")
+                st.download_button("⬇️ Download Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # Flagged log
             with open(flagged_log, "rb") as f:
-                st.download_button("⬇️ Flagged", f, file_name=f"flagged_{timestamp}.txt")
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("flagged_logo.png"):
+                    st.image("flagged_logo.png")
+                st.download_button("⬇️ Download Flagged", f, file_name=f"flagged_{timestamp}.txt")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # Blocklist
             with open(blocklist_file, "rb") as f:
-                st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("blocklist_logo.png"):
+                    st.image("blocklist_logo.png")
+                st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+                st.markdown('</div>', unsafe_allow_html=True)
+
             st.markdown('</div>', unsafe_allow_html=True)
 
+            # ====================================================
+            # GitHub commit + cleanup
+            # ====================================================
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
