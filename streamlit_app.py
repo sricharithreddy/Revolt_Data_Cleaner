@@ -74,9 +74,7 @@ st.markdown("---")
 # File Upload Section
 # ====================================================
 with st.container(border=True):
-    if os.path.exists("icon_upload.png"):
-        st.image("icon_upload.png", width=40)
-    st.subheader("Upload Your File")
+    st.subheader("📂 Upload Your File")
     uploaded_file = st.file_uploader(
         "Upload Excel/CSV", type=["xlsx", "xls", "csv"], label_visibility="collapsed"
     )
@@ -102,9 +100,7 @@ if uploaded_file is not None:
             # Process Summary
             # ====================================================
             with st.container(border=True):
-                if os.path.exists("icon_summary.png"):
-                    st.image("icon_summary.png", width=40)
-                st.subheader("Process Summary")
+                st.subheader("📊 Process Summary")
 
                 cleaned_df = pd.ExcelFile(cleaned_output)
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
@@ -113,10 +109,10 @@ if uploaded_file is not None:
                 removed_rows = orig_rows - total_rows
 
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Processed", orig_rows)
-                m2.metric("Cleaned", total_rows)
-                m3.metric("Removed", removed_rows)
-                m4.metric("New Blocklist", result["new_numbers"])
+                m1.metric("✅ Processed", orig_rows)
+                m2.metric("🧹 Cleaned", total_rows)
+                m3.metric("⛔ Removed", removed_rows)
+                m4.metric("📋 New Blocklist", result["new_numbers"])
 
                 st.caption(f"📋 Total Blocklist Size: {len(load_blocklist())}")
 
@@ -124,31 +120,42 @@ if uploaded_file is not None:
             # Downloads Section
             # ====================================================
             with st.container(border=True):
-                if os.path.exists("icon_downloads.png"):
-                    st.image("icon_downloads.png", width=40)
-                st.subheader("Downloads")
+                st.subheader("⬇️ Downloads")
 
                 d1, d2, d3 = st.columns(3)
 
                 with d1:
                     with open(cleaned_output, "rb") as f:
-                        st.download_button("📥 Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
+                        st.download_button(
+                            "✅ Cleaned File",
+                            f,
+                            file_name=f"cleaned_{timestamp}.xlsx",
+                            use_container_width=True
+                        )
 
                 with d2:
                     with open(flagged_log, "rb") as f:
-                        st.download_button("📥 Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
+                        st.download_button(
+                            "⚠️ Flagged Log",
+                            f,
+                            file_name=f"flagged_{timestamp}.txt",
+                            use_container_width=True
+                        )
 
                 with d3:
                     with open(blocklist_file, "rb") as f:
-                        st.download_button("📥 Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+                        st.download_button(
+                            "⛔ Blocklist",
+                            f,
+                            file_name=f"blocklist_{timestamp}.csv",
+                            use_container_width=True
+                        )
 
             # ====================================================
             # Blocklist Preview
             # ====================================================
             with st.container(border=True):
-                if os.path.exists("icon_blocklist.png"):
-                    st.image("icon_blocklist.png", width=40)
-                with st.expander("Preview Blocklist (last 20 numbers)"):
+                with st.expander("📋 Preview Blocklist (last 20 numbers)"):
                     try:
                         blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
                         st.dataframe(blocklist_df.tail(20), use_container_width=True)
