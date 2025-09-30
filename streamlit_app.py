@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import os, glob, subprocess
 from datetime import datetime
-from Revoltv11 import process_file, load_blocklist # Assuming this module is correct
+from Revoltv11 import process_file, load_blocklist
 
 # ====================================================
-# GitHub Auto-Commit for Blocklist
+# GitHub Auto-Commit for Blocklist (Remains the same)
 # ====================================================
 def commit_blocklist_to_github():
     try:
-        # Using st.secrets for production setup
+        # Use st.secrets for a production app, mock for local testing if needed
         token = st.secrets["GITHUB_TOKEN"]
         user = st.secrets["GITHUB_USER"]
         repo = st.secrets["GITHUB_REPO"]
@@ -29,10 +29,10 @@ def commit_blocklist_to_github():
         subprocess.run(["git", "push", remote_url, "main"], check=True)
         st.success("✅ Blocklist committed to GitHub successfully.")
     except Exception as e:
-        st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN: {e}")
+        st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN in secrets: {e}")
 
 # ====================================================
-# Auto-cleanup old files
+# Auto-cleanup old files (Remains the same)
 # ====================================================
 def cleanup_old_files(keep_files):
     patterns = ["uploaded_*.xlsx", "cleaned_*.xlsx", "flagged_*.txt"]
@@ -47,29 +47,42 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="centered")
+# Switched to 'wide' layout to give more space for left alignment to look good
+st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="wide")
 
 # ====================================================
-# CSS Styling - IMPORVED FOR PROFESSIONALISM & CENTERING
+# CSS Styling - MODIFIED FOR LEFT ALIGNMENT
 # ====================================================
 st.markdown(
     """
     <style>
         /* General Layout & Background */
-        .main { background-color: #ffffff; } /* Pure white background for a clean look */
+        .main { background-color: #ffffff; }
 
-        /* Main Container for Centering */
+        /* Block Container: Content is now left-aligned */
         .block-container {
             padding-top: 30px;
             padding-bottom: 20px;
-            text-align: center;
+            text-align: left; /* Essential change */
+        }
+        
+        /* Remove previous centering attempts on the image/logo */
+        div.stImage > img {
+            margin-left: 0 !important;
+            margin-right: auto;
+            display: block;
         }
 
-        /* Centering the File Uploader */
-        /* The default Streamlit file uploader is already centered in a 'centered' layout. */
-        div[data-testid="stFileUploader"] { margin: 20px auto; max-width: 500px; }
+        /* File Uploader: Align to the left of its container */
+        div[data-testid="stFileUploader"] { 
+            margin: 20px 0; /* Left align */
+            max-width: 500px; 
+        }
 
-        /* Custom Button Style (Primary Action) */
+        /* Custom Button Style (Primary Action): Now left-aligned */
+        div.stButton {
+            text-align: left;
+        }
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white; border: none; border-radius: 12px;
@@ -77,6 +90,7 @@ st.markdown(
             margin-top: 25px; min-width: 250px;
             box-shadow: 0 4px 10px rgba(227, 6, 19, 0.4);
             transition: all 0.2s ease;
+            width: auto; /* Allow button to shrink */
         }
         div.stButton > button:first-child:hover {
             background: linear-gradient(90deg, #b0000d, #e30613);
@@ -84,17 +98,17 @@ st.markdown(
             transform: translateY(-2px);
         }
 
-        /* Result Box - Modern, well-defined look */
+        /* Result Box - Now left-aligned */
         .result-box {
             background: #fcfcfc;
             padding: 30px;
             border-radius: 15px;
-            border-left: 5px solid #e30613; /* Highlight color */
+            border-left: 5px solid #e30613;
             box-shadow: 0 8px 25px rgba(0,0,0,0.1);
             margin-top: 35px;
             text-align: left;
             max-width: 650px;
-            margin-left: auto;
+            margin-left: 0; /* Align left */
             margin-right: auto;
         }
         .result-box h4 {
@@ -105,22 +119,11 @@ st.markdown(
             font-weight: 700;
         }
         
-        /* Download Buttons Styling (for secondary actions) */
-        div.stDownloadButton > button {
-            background-color: #007bff; 
-            color: white; border: none; border-radius: 8px;
-            padding: 0.6em 1em; font-size: 15px; font-weight: 600;
-            width: 100%;
-            margin-top: 10px;
-            transition: background-color 0.2s;
-        }
-        div.stDownloadButton > button:hover {
-            background-color: #0056b3;
-        }
-        
-        /* Centering the logo image specifically */
-        .logo-container {
-            text-align: center;
+        /* Download Buttons Styling - Now left-aligned */
+        .download-column-header {
+            text-align: left; 
+            font-weight: bold; 
+            margin-bottom: 10px;
         }
 
     </style>
@@ -129,28 +132,29 @@ st.markdown(
 )
 
 # ====================================================
-# Logo + Subtitle (stacked, centered, no cropping)
+# Header (Logo + Title) - ALIGNED LEFT
 # ====================================================
-st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+
+# This column structure ensures the header content lives neatly on the left
+st.columns([1])[0].markdown('<div style="text-align: left;">', unsafe_allow_html=True)
+
 if os.path.exists("revolt_logo.png"):
-    # Logo is now centered via CSS applied to logo-container
-    st.image("revolt_logo.png", width=120)
+    st.image("revolt_logo.png", width=100) # Slightly smaller for left alignment
 else:
     st.write("⚠️ Add revolt_logo.png to repo root")
-st.markdown('</div>', unsafe_allow_html=True)
-
 
 st.markdown(
     """
-    <h1 style="text-align: center; margin-top: 15px; font-weight: 700; color: #333; font-size: 32px;">
+    <h1 style="text-align: left; margin-top: 5px; font-weight: 700; color: #333; font-size: 32px;">
         Data Processor for AI
     </h1>
-    <p style="text-align: center; color: #666; margin-bottom: 30px;">
+    <p style="text-align: left; color: #666; margin-bottom: 30px;">
         Clean, filter, and prepare your data for machine learning models.
     </p>
     """,
     unsafe_allow_html=True
 )
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ====================================================
 # Upload + Processing
@@ -176,10 +180,8 @@ if uploaded_file is not None:
         st.error(f"Failed to save uploaded file: {e}")
         st.stop()
         
-    # Center the processing button
-    col_button = st.columns([1, 1, 1])[1] # Use the middle column for centering
-
-    if col_button.button("🚀 Run Processing"):
+    # Button is no longer centered, it's just placed after the uploader
+    if st.button("🚀 Run Processing"):
         with st.spinner("⚡ Processing in progress..."):
             try:
                 result = process_file(input_path, cleaned_output, flagged_log)
@@ -191,6 +193,7 @@ if uploaded_file is not None:
             # ================================
             # Summary Card Calculation
             # ================================
+            # (Calculation logic remains the same)
             try:
                 cleaned_df = pd.ExcelFile(cleaned_output)
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
@@ -207,7 +210,7 @@ if uploaded_file is not None:
             total_blocklist = len(load_blocklist())
 
             # ================================
-            # Summary Card (Cleaned Look)
+            # Summary Card (Aligned Left)
             # ================================
             st.markdown(
                 f"""
@@ -242,17 +245,17 @@ if uploaded_file is not None:
             )
 
             # ================================
-            # Downloads Section
+            # Downloads Section (Aligned Left)
             # ================================
             st.markdown("---")
-            st.markdown('<h4 style="text-align: center; margin-top: 30px; margin-bottom: 20px;">Download Results</h4>', unsafe_allow_html=True)
+            st.markdown('<h4>Download Results</h4>', unsafe_allow_html=True)
             
             # Create a 3-column layout for the downloads
-            col1, col2, col3 = st.columns([1, 1, 1])
+            col1, col2, col3, col_pad = st.columns([1, 1, 1, 2]) # Added padding column for wide layout
             
             # Cleaned file
             with col1:
-                st.markdown('<div style="text-align: center;"><b>Cleaned Data</b></div>', unsafe_allow_html=True)
+                st.markdown('<div class="download-column-header">Cleaned Data</div>', unsafe_allow_html=True)
                 if os.path.exists("cleaned_logo.png"):
                     st.image("cleaned_logo.png", width=50)
                 with open(cleaned_output, "rb") as f:
@@ -260,7 +263,7 @@ if uploaded_file is not None:
 
             # Flagged log
             with col2:
-                st.markdown('<div style="text-align: center;"><b>Flagged Log</b></div>', unsafe_allow_html=True)
+                st.markdown('<div class="download-column-header">Flagged Log</div>', unsafe_allow_html=True)
                 if os.path.exists("flagged_logo.png"):
                     st.image("flagged_logo.png", width=50)
                 with open(flagged_log, "rb") as f:
@@ -268,7 +271,7 @@ if uploaded_file is not None:
 
             # Blocklist
             with col3:
-                st.markdown('<div style="text-align: center;"><b>Updated Blocklist</b></div>', unsafe_allow_html=True)
+                st.markdown('<div class="download-column-header">Updated Blocklist</div>', unsafe_allow_html=True)
                 if os.path.exists("blocklist_logo.png"):
                     st.image("blocklist_logo.png", width=50)
                 with open(blocklist_file, "rb") as f:
@@ -279,3 +282,4 @@ if uploaded_file is not None:
             # GitHub Commit + Cleanup
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+```
