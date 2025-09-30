@@ -2,6 +2,7 @@ import pandas as pd
 import re
 import os
 from typing import List, Dict, Optional
+from datetime import datetime
 
 def split_camel_case(name: str) -> str:
     if not name or not isinstance(name, str):
@@ -73,6 +74,7 @@ def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Di
 
 def process_file(input_file_path: str, output_file_path: str, flagged_log_path: str = "flagged_names.txt"):
     logs: List[Dict] = []
+    today_str = datetime.today().strftime("%Y-%m-%d")
 
     # Column rename rules
     rename_rules = {
@@ -90,34 +92,18 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
         raise ValueError("Unsupported format")
 
     # --------------------
-    # Blocklist Seeding
+    # Load Blocklist with Date
     # --------------------
     blocklist_file = "seen_feedback_mobiles.csv"
-    seen_set = set()
-    seeded_count = 0
     if os.path.exists(blocklist_file):
         seen_df = pd.read_csv(blocklist_file)
-        seen_set = set(str(x).strip() for x in seen_df['Mobile Number'] if str(x).strip())
+        if "DateAdded" not in seen_df.columns:
+            seen_df["DateAdded"] = today_str  # fallback for old format
     else:
-        # Try seeding from Calling Data.xlsx if available
-        if os.path.exists("Calling Data.xlsx"):
-            try:
-                calls_df = pd.read_excel("Calling Data.xlsx", sheet_name="Calls")
-                if "mobile_number" in calls_df.columns:
-                    mobiles = []
-                    for m in calls_df["mobile_number"].dropna():
-                        digits = re.sub(r"\D", "", str(m))
-                        if len(digits) == 10:
-                            mobiles.append(digits)
-                        elif len(digits) > 10:
-                            mobiles.append(digits[-10:])
-                    seen_set = set(mobiles)
-                    pd.Series(sorted(seen_set), name="Mobile Number").to_csv(blocklist_file, index=False)
-                    seeded_count = len(seen_set)
-            except Exception as e:
-                print(f"Seeding blocklist failed: {e}")
+        seen_df = pd.DataFrame(columns=["Mobile Number", "DateAdded"])
 
-    new_numbers = set()
+    seen_dict = dict(zip(seen_df["Mobile Number"].astype(str), seen_df["DateAdded"]))
+    new_numbers = {}
     cleaned_sheets = {}
 
     # --------------------
@@ -125,21 +111,34 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
     # --------------------
     for sheet_name, df in all_sheets.items():
         df = df.rename(columns=lambda c: rename_rules.get(c.lower().strip(), c))
+
         if "Mobile Number" in df.columns:
             df["Mobile Number"] = [clean_mobile_number(val, idx, logs) for idx, val in df["Mobile Number"].items()]
-            df = df[~df["Mobile Number"].isin(seen_set)]
+
+            # Apply blocking rule: remove if added before today
+            df = df[df["Mobile Number"].apply(
+                lambda x: not (x in seen_dict and seen_dict[x] < today_str)
+            )]
+
         if "Customer Name" in df.columns:
             df["Customer Name"] = [clean_customer_name(val, idx, logs) for idx, val in df["Customer Name"].items()]
-        if sheet_name.lower() == "tr_completed" and "Mobile Number" in df.columns:
-            new_numbers.update([str(x).strip() for x in df["Mobile Number"] if str(x).strip()])
+
+        # Check for TR_Completed-like sheet
+        if sheet_name.lower().startswith("tr_completed") and "Mobile Number" in df.columns:
+            for num in df["Mobile Number"]:
+                if num and num not in seen_dict:
+                    new_numbers[num] = today_str
+
         cleaned_sheets[sheet_name] = df
 
     # --------------------
-    # Update blocklist
+    # Update Blocklist with New Numbers
     # --------------------
     if new_numbers:
-        updated_numbers = sorted(seen_set.union(new_numbers))
-        pd.Series(updated_numbers, name="Mobile Number").to_csv(blocklist_file, index=False)
+        new_entries = pd.DataFrame(list(new_numbers.items()), columns=["Mobile Number", "DateAdded"])
+        seen_df = pd.concat([seen_df, new_entries], ignore_index=True)
+        seen_df.drop_duplicates(subset=["Mobile Number", "DateAdded"], keep="first", inplace=True)
+        seen_df.to_csv(blocklist_file, index=False)
 
     # Save cleaned Excel
     with pd.ExcelWriter(output_file_path, engine="xlsxwriter") as writer:
@@ -158,5 +157,5 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
 
     return {
         "new_numbers": len(new_numbers),
-        "seeded": seeded_count
+        "seeded": 0  # no seeding here, handled earlier
     }
