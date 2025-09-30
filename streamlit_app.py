@@ -57,10 +57,18 @@ def cleanup_old_files(keep_files):
 # ====================================================
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
-# Custom CSS (CTA button styling)
+# Custom CSS (Center everything + CTA button styling)
 st.markdown(
     """
     <style>
+        /* Center all main content */
+        .centered {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white;
@@ -81,14 +89,22 @@ st.markdown(
 )
 
 # ====================================================
-# Properly Centered Logo
+# Centered Content Wrapper
 # ====================================================
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if os.path.exists("revolt_logo.png"):
-        st.image("revolt_logo.png", width=180)
-    else:
-        st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
+st.markdown('<div class="centered">', unsafe_allow_html=True)
+
+# Logo
+if os.path.exists("revolt_logo.png"):
+    st.markdown(
+        """
+        <div style="margin-bottom: 20px;">
+            <img src="revolt_logo.png" width="180">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
 # File Upload
@@ -145,3 +161,6 @@ if uploaded_file is not None:
 
         # Cleanup old temp files
         cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+
+# Close centered container
+st.markdown('</div>', unsafe_allow_html=True)
