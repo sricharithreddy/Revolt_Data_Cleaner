@@ -14,7 +14,7 @@ from Revoltv11 import process_file
 # Page Config
 # =========================
 st.set_page_config(
-    page_title="Revolt Motors",
+    page_title="Revolt Data Cleaner",
     page_icon="⚡",
     layout="centered"
 )
@@ -37,11 +37,11 @@ LOGO_PATH = "revolt_logo.png"
 logo_html = ""
 if os.path.exists(LOGO_PATH):
     logo_b64 = get_base64_of_file(LOGO_PATH)
-    # Larger logo + subtle pulse animation (pure CSS)
+    # ✅ Larger static logo (no animation)
     logo_html = (
         '<img src="data:image/png;base64,'
         + logo_b64
-        + '" width="180" style="margin-right:15px; animation: pulse 2s infinite;">'
+        + '" width="200" style="margin-bottom:10px;">'
     )
 
 bike_anim = None
@@ -102,24 +102,16 @@ h1, h2, h3 { font-weight: 700 !important; }
     max-width: 650px;
     margin: 20px auto;
 }
-
-/* Logo pulse */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# Header
+# Header (Logo only, no heading)
 # =========================
 header_html = (
     '<div style="display:flex; align-items:center; justify-content:center; margin-bottom:10px;">'
-    + logo_html
-    + '<h1 style="color:#222; margin:0;">Revolt Motors AI</h1>'
-    + '</div>'
+    + logo_html +
+    '</div>'
     + '<p style="text-align:center; color:#666; font-size:16px;">'
     + 'Upload raw Excel/CSV → get a <b>cleaned dataset</b>, <b>flagged log</b>, and an <b>updated blocklist</b>.'
     + '</p>'
@@ -155,11 +147,9 @@ if uploaded_file:
         new_count = result.get("new_numbers", 0)
 
         # --- Stats ---
-        # Cleaned totals
         cleaned_xl = pd.ExcelFile(cleaned_output)
         total_rows = sum(len(cleaned_xl.parse(s)) for s in cleaned_xl.sheet_names)
 
-        # Original totals
         original_xl = pd.ExcelFile(input_path)
         orig_rows = sum(len(original_xl.parse(s)) for s in original_xl.sheet_names)
 
