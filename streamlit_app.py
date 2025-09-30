@@ -1,81 +1,56 @@
 import streamlit as st
-import pandas as pd
-import tempfile, os, io
-import json
-from Revoltv11 import process_file  # your existing cleaning logic
+import os
+import tempfile
+from Revoltv11 import process_file
 
-st.set_page_config(page_title="Revolt Cleaner", layout="wide")
+st.set_page_config(page_title="Revolt Data Cleaner", layout="centered")
+st.title("⚡ Revolt Motors Data Cleaner")
 
-st.title("Revolt — Customer Data Cleaner")
-st.write("Upload Excel/CSV and get cleaned workbook + flagged log.")
+uploaded_file = st.file_uploader("Upload your Excel/CSV file", type=["xlsx", "xls", "csv"])
 
-# Upload
-uploaded = st.file_uploader("Upload Excel/CSV", type=["xlsx", "xls", "csv"])
-out_name = st.text_input("Output file prefix", value="Revolt_Cleaned")
+if uploaded_file is not None:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp:
+        tmp.write(uploaded_file.read())
+        input_path = tmp.name
 
-# Column rename editor
-st.subheader("Optional: Column Name Changes")
-st.markdown(
-    """
-Default conditions applied:
-- `mobilenumber` → `Mobile Number`  
-- `buyername` → `Customer Name`  
-- `testridedateandtimeactual` → `trscheduleactual`
+    cleaned_output = "cleaned_output.xlsx"
+    flagged_log = "flagged_log.txt"
 
-You can add more rules here, one per line, in the format:
-```
-old_column -> New Column
-```
-"""
-)
-rename_rules_text = st.text_area(
-    "Column rename rules", 
-    value="mobilenumber -> Mobile Number\nbuyername -> Customer Name\ntestridedateandtimeactual -> trscheduleactual",
-    height=120
-)
+    if st.button("🚀 Run Cleaning"):
+        new_count = process_file(input_path, cleaned_output, flagged_log)
 
-# Parse rules into dict
-def parse_rules(text: str):
-    mapping = {}
-    for line in text.splitlines():
-        if "->" in line:
-            old, new = line.split("->", 1)
-            old, new = old.strip(), new.strip()
-            if old and new:
-                mapping[old.lower()] = new
-    return mapping
+        # Show info about blocklist update
+        if new_count > 0:
+            st.info(f"✅ Blocklist updated with {new_count} new numbers.")
+        else:
+            st.info("ℹ️ No new numbers were added to the blocklist this run.")
 
-rename_rules = parse_rules(rename_rules_text)
-os.environ["REVOLT_RENAMES"] = json.dumps(rename_rules)
+        # Download cleaned file
+        if os.path.exists(cleaned_output):
+            with open(cleaned_output, "rb") as f:
+                st.download_button(
+                    "⬇️ Download Cleaned File",
+                    f,
+                    file_name="cleaned_output.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-# Run cleaner
-if uploaded and st.button("Run Cleaner"):
-    with st.spinner("Cleaning in progress..."):
-        suffix = os.path.splitext(uploaded.name)[1]
-        tmp_in = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        tmp_in.write(uploaded.getbuffer())
-        tmp_in.flush()
-        tmp_in.close()
+        # Download flagged log
+        if os.path.exists(flagged_log):
+            with open(flagged_log, "rb") as f:
+                st.download_button(
+                    "⬇️ Download Flagged Log",
+                    f,
+                    file_name="flagged_log.txt",
+                    mime="text/plain"
+                )
 
-        tmp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-        tmp_out.close()
-        tmp_log = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-        tmp_log.close()
-
-        try:
-            process_file(tmp_in.name, tmp_out.name, tmp_log.name)
-
-            with open(tmp_out.name, "rb") as f:
-                cleaned_bytes = f.read()
-            with open(tmp_log.name, "rb") as f:
-                log_bytes = f.read()
-
-            st.success("Cleaning completed. Download results below:")
-            st.download_button("📥 Download cleaned Excel", cleaned_bytes, f"{out_name}.xlsx")
-            st.download_button("📥 Download flagged log", log_bytes, f"{out_name}_flagged.csv")
-        finally:
-            for fn in (tmp_in.name, tmp_out.name, tmp_log.name):
-                try:
-                    os.unlink(fn)
-                except:
-                    pass
+        # Download blocklist
+        if os.path.exists("seen_feedback_mobiles.csv"):
+            with open("seen_feedback_mobiles.csv", "rb") as f:
+                st.download_button(
+                    "⬇️ Download Blocklist",
+                    f,
+                    file_name="seen_feedback_mobiles.csv",
+                    mime="text/csv"
+                )
