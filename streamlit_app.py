@@ -45,7 +45,7 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-st.set_page_config(page_title="Revolt Data Cleaner", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="centered")
 
 # ====================================================
 # CSS Styling
@@ -55,19 +55,16 @@ st.markdown(
     <style>
         .main { background-color: #f5f6f8; }
 
-        /* Keep everything aligned in center row-wise */
         .block-container {
             display: flex;
             flex-direction: column;
-            align-items: center;   /* horizontal center */
-            padding-top: 25px;     /* small breathing space */
+            align-items: center;
+            padding-top: 25px;
             text-align: center;
         }
 
-        /* Upload box */
         div[data-testid="stFileUploader"] { margin: 0 auto; }
 
-        /* Run Button */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white; border: none; border-radius: 8px;
@@ -78,7 +75,6 @@ st.markdown(
             background: linear-gradient(90deg, #b0000d, #e30613);
         }
 
-        /* Results card */
         .result-box {
             background: #fff;
             padding: 20px;
@@ -88,7 +84,6 @@ st.markdown(
             text-align: left;
         }
 
-        /* Download grid */
         .download-grid {
             display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap;
         }
@@ -108,14 +103,17 @@ st.markdown(
 )
 
 # ====================================================
-# Logo + Title
+# Logo + Subtitle (stacked, centered)
 # ====================================================
-if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", width=150)
-else:
-    st.write("⚠️ Add revolt_logo.png to repo root")
-
-st.markdown("### ⚡ Data Cleaning Dashboard")
+st.markdown(
+    """
+    <div style="text-align: center; margin-bottom: 25px;">
+        <img src="revolt_logo.png" alt="Revolt Logo" style="height: 70px; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-weight: 600; color: #333;">Data Processor for AI</h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ====================================================
 # Upload + Processing
@@ -132,8 +130,8 @@ if uploaded_file is not None:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    if st.button("🚀 Run Cleaning"):
-        with st.spinner("⚡ Cleaning in progress..."):
+    if st.button("🚀 Run Processing"):
+        with st.spinner("⚡ Processing in progress..."):
             result = process_file(input_path, cleaned_output, flagged_log)
 
             # ================================
@@ -148,7 +146,7 @@ if uploaded_file is not None:
             st.markdown(
                 f"""
                 <div class="result-box">
-                <h4>✅ Cleaning Complete</h4>
+                <h4>✅ Processing Complete</h4>
                 <ul>
                     <li><b>Processed:</b> {orig_rows} rows</li>
                     <li><b>Cleaned File:</b> {total_rows} rows</li>
