@@ -54,6 +54,31 @@ st.set_page_config(
 )
 
 # ====================================================
+# Custom Styling
+# ====================================================
+st.markdown(
+    """
+    <style>
+    /* Modern CTA button */
+    div.stButton > button:first-child {
+        background-color: #e30613;
+        color: white;
+        border-radius: 25px;
+        padding: 0.6em 1.5em;
+        font-weight: 600;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #b0000d;
+        transform: scale(1.02);
+        transition: 0.2s;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ====================================================
 # Branding (Logo + Subtitle centered)
 # ====================================================
 logo_col = st.columns([1, 2, 1])[1]
@@ -92,8 +117,8 @@ if uploaded_file is not None:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    if st.button("🚀 Run Processing", use_container_width=True, type="primary"):
-        with st.spinner("⚡ Processing in progress..."):
+    if st.button("🚀 Run Processing", use_container_width=True):
+        with st.spinner("⚡ Processing in progress... Please wait..."):
             result = process_file(input_path, cleaned_output, flagged_log)
 
             # ====================================================
@@ -110,9 +135,9 @@ if uploaded_file is not None:
 
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("✅ Processed", orig_rows)
-                m2.metric("🧹 Cleaned", total_rows)
-                m3.metric("⛔ Removed", removed_rows)
-                m4.metric("📋 New Blocklist", result["new_numbers"])
+                m2.metric("🧹 Cleaned", total_rows, delta=total_rows - orig_rows)
+                m3.metric("⛔ Removed", removed_rows, delta=-removed_rows if removed_rows > 0 else None)
+                m4.metric("📋 New Blocklist", result["new_numbers"], delta=result["new_numbers"])
 
                 st.caption(f"📋 Total Blocklist Size: {len(load_blocklist())}")
 
@@ -155,7 +180,7 @@ if uploaded_file is not None:
             # Blocklist Preview
             # ====================================================
             with st.container(border=True):
-                with st.expander("📋 Preview Blocklist (last 20 numbers)"):
+                with st.expander("📋 Preview Blocklist (last 20 numbers)", expanded=False):
                     try:
                         blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
                         st.dataframe(blocklist_df.tail(20), use_container_width=True)
@@ -165,5 +190,14 @@ if uploaded_file is not None:
             # ====================================================
             # GitHub Commit + Cleanup
             # ====================================================
-            commit_blocklist_to_github()
+            with st.spinner("🔄 Syncing blocklist to GitHub..."):
+                commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+
+# ====================================================
+# Footer
+# ====================================================
+st.markdown(
+    "<hr><p style='text-align:center; color:gray; font-size:12px;'>⚡ Powered by Revolt Data Engine ⚡</p>",
+    unsafe_allow_html=True
+)
