@@ -57,13 +57,38 @@ def cleanup_old_files(keep_files):
 # ====================================================
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
-# Centered logo header
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if os.path.exists("revolt_logo.png"):
-        st.image("revolt_logo.png", width=180)  # Professional fixed width
-    else:
-        st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
+# Custom CSS (CTA button styling)
+st.markdown(
+    """
+    <style>
+        div.stButton > button:first-child {
+            background: linear-gradient(90deg, #e30613, #b0000d);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6em 1.2em;
+            font-size: 16px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        div.stButton > button:first-child:hover {
+            background: linear-gradient(90deg, #b0000d, #e30613);
+            transform: scale(1.02);
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Properly Centered Logo
+st.markdown(
+    """
+    <div style="text-align:center; padding: 20px 0;">
+        <img src="revolt_logo.png" style="width:150px;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ====================================================
 # File Upload
@@ -82,40 +107,41 @@ if uploaded_file is not None:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    # Run processing
-    st.info("⚡ Running cleaner, please wait...")
-    result = process_file(input_path, cleaned_output, flagged_log)
+    # CTA button
+    if st.button("🚀 Run Cleaning", use_container_width=True):
+        st.info("⚡ Running cleaner, please wait...")
+        result = process_file(input_path, cleaned_output, flagged_log)
 
-    # Load sizes
-    cleaned_df = pd.ExcelFile(cleaned_output)
-    total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
-    orig_df = pd.ExcelFile(input_path)
-    orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
-    removed_rows = orig_rows - total_rows
+        # Load sizes
+        cleaned_df = pd.ExcelFile(cleaned_output)
+        total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
+        orig_df = pd.ExcelFile(input_path)
+        orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
+        removed_rows = orig_rows - total_rows
 
-    # Process summary
-    st.markdown("### 📊 Process Summary")
-    st.success(
-        f"""
-        ✅ Processed: {orig_rows} rows  
-        📤 Cleaned File: {total_rows} rows  
-        🚫 Removed (blocklisted): {removed_rows} rows  
-        📋 Blocklist: +{result['new_numbers']} new (now total {len(load_blocklist())})
-        """
-    )
+        # Process summary
+        st.markdown("### 📊 Process Summary")
+        st.success(
+            f"""
+            ✅ Processed: {orig_rows} rows  
+            📤 Cleaned File: {total_rows} rows  
+            🚫 Removed (blocklisted): {removed_rows} rows  
+            📋 Blocklist: +{result['new_numbers']} new (now total {len(load_blocklist())})
+            """
+        )
 
-    # Download buttons with timestamped names
-    with open(cleaned_output, "rb") as f:
-        st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
+        # Download buttons with timestamped names
+        with open(cleaned_output, "rb") as f:
+            st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
 
-    with open(flagged_log, "rb") as f:
-        st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+        with open(flagged_log, "rb") as f:
+            st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
 
-    with open(blocklist_file, "rb") as f:
-        st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+        with open(blocklist_file, "rb") as f:
+            st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
 
-    # Commit blocklist back to GitHub
-    commit_blocklist_to_github()
+        # Commit blocklist back to GitHub
+        commit_blocklist_to_github()
 
-    # Cleanup old temp files
-    cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+        # Cleanup old temp files
+        cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
