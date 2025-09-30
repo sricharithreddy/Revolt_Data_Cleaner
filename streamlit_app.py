@@ -2,20 +2,19 @@ import streamlit as st
 import pandas as pd
 import os, glob, subprocess
 from datetime import datetime
+# Ensure Revoltv11 is in your directory or path
 from Revoltv11 import process_file, load_blocklist
 
 # ====================================================
-# GitHub Auto-Commit for Blocklist (Remains the same)
+# GitHub Auto-Commit for Blocklist
 # ====================================================
 def commit_blocklist_to_github():
     try:
-        # Use st.secrets for a production app, mock for local testing if needed
         token = st.secrets["GITHUB_TOKEN"]
         user = st.secrets["GITHUB_USER"]
         repo = st.secrets["GITHUB_REPO"]
-        remote_url = f"https://{user}:{token}@github.com/{user}/{repo}.git"
+        remote_url = f"https://{user}:{token}@[github.com/](https://github.com/){user}/{repo}.git"
 
-        # Git configuration and setup
         subprocess.run(["git", "config", "--global", "user.email", f"{user}@users.noreply.github.com"], check=True)
         subprocess.run(["git", "config", "--global", "user.name", user], check=True)
         subprocess.run(["git", "add", "seen_feedback_mobiles.csv"], check=True)
@@ -32,7 +31,7 @@ def commit_blocklist_to_github():
         st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN in secrets: {e}")
 
 # ====================================================
-# Auto-cleanup old files (Remains the same)
+# Auto-cleanup old files
 # ====================================================
 def cleanup_old_files(keep_files):
     patterns = ["uploaded_*.xlsx", "cleaned_*.xlsx", "flagged_*.txt"]
@@ -47,7 +46,7 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-# Switched to 'wide' layout to give more space for left alignment to look good
+# Using 'wide' layout for better left-alignment presentation
 st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="wide")
 
 # ====================================================
@@ -63,10 +62,10 @@ st.markdown(
         .block-container {
             padding-top: 30px;
             padding-bottom: 20px;
-            text-align: left; /* Essential change */
+            text-align: left;
         }
         
-        /* Remove previous centering attempts on the image/logo */
+        /* Ensure the Streamlit image component is left-aligned */
         div.stImage > img {
             margin-left: 0 !important;
             margin-right: auto;
@@ -75,11 +74,11 @@ st.markdown(
 
         /* File Uploader: Align to the left of its container */
         div[data-testid="stFileUploader"] { 
-            margin: 20px 0; /* Left align */
+            margin: 20px 0;
             max-width: 500px; 
         }
 
-        /* Custom Button Style (Primary Action): Now left-aligned */
+        /* Custom Button Style (Primary Action): Left align in its div */
         div.stButton {
             text-align: left;
         }
@@ -90,7 +89,7 @@ st.markdown(
             margin-top: 25px; min-width: 250px;
             box-shadow: 0 4px 10px rgba(227, 6, 19, 0.4);
             transition: all 0.2s ease;
-            width: auto; /* Allow button to shrink */
+            width: auto;
         }
         div.stButton > button:first-child:hover {
             background: linear-gradient(90deg, #b0000d, #e30613);
@@ -98,7 +97,7 @@ st.markdown(
             transform: translateY(-2px);
         }
 
-        /* Result Box - Now left-aligned */
+        /* Result Box - Aligned Left */
         .result-box {
             background: #fcfcfc;
             padding: 30px;
@@ -108,7 +107,7 @@ st.markdown(
             margin-top: 35px;
             text-align: left;
             max-width: 650px;
-            margin-left: 0; /* Align left */
+            margin-left: 0;
             margin-right: auto;
         }
         .result-box h4 {
@@ -119,13 +118,12 @@ st.markdown(
             font-weight: 700;
         }
         
-        /* Download Buttons Styling - Now left-aligned */
+        /* Download Buttons Styling - Ensure headers align left */
         .download-column-header {
             text-align: left; 
             font-weight: bold; 
             margin-bottom: 10px;
         }
-
     </style>
     """,
     unsafe_allow_html=True
@@ -134,12 +132,8 @@ st.markdown(
 # ====================================================
 # Header (Logo + Title) - ALIGNED LEFT
 # ====================================================
-
-# This column structure ensures the header content lives neatly on the left
-st.columns([1])[0].markdown('<div style="text-align: left;">', unsafe_allow_html=True)
-
 if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", width=100) # Slightly smaller for left alignment
+    st.image("revolt_logo.png", width=100) # Left-aligned in the 'wide' container
 else:
     st.write("⚠️ Add revolt_logo.png to repo root")
 
@@ -154,7 +148,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ====================================================
 # Upload + Processing
@@ -180,7 +174,7 @@ if uploaded_file is not None:
         st.error(f"Failed to save uploaded file: {e}")
         st.stop()
         
-    # Button is no longer centered, it's just placed after the uploader
+    # Button is left-aligned
     if st.button("🚀 Run Processing"):
         with st.spinner("⚡ Processing in progress..."):
             try:
@@ -193,7 +187,6 @@ if uploaded_file is not None:
             # ================================
             # Summary Card Calculation
             # ================================
-            # (Calculation logic remains the same)
             try:
                 cleaned_df = pd.ExcelFile(cleaned_output)
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
@@ -251,7 +244,7 @@ if uploaded_file is not None:
             st.markdown('<h4>Download Results</h4>', unsafe_allow_html=True)
             
             # Create a 3-column layout for the downloads
-            col1, col2, col3, col_pad = st.columns([1, 1, 1, 2]) # Added padding column for wide layout
+            col1, col2, col3, col_pad = st.columns([1, 1, 1, 2])
             
             # Cleaned file
             with col1:
@@ -282,4 +275,3 @@ if uploaded_file is not None:
             # GitHub Commit + Cleanup
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
-```
