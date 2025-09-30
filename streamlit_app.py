@@ -89,13 +89,14 @@ if uploaded_file is not None:
         """
     )
 
+    # Download buttons with timestamped names
     with open(cleaned_output, "rb") as f:
-        st.download_button("⬇️ Download Cleaned File", f, file_name=os.path.basename(cleaned_output))
+        st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
 
     with open(flagged_log, "rb") as f:
-        st.download_button("⬇️ Download Flagged Log", f, file_name=os.path.basename(flagged_log))
+        st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
 
     with open("seen_feedback_mobiles.csv", "rb") as f:
-        st.download_button("⬇️ Download Blocklist", f, file_name="seen_feedback_mobiles.csv")
+        st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
 
     commit_blocklist_to_github()
