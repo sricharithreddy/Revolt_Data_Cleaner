@@ -148,4 +148,15 @@ if uploaded_file is not None:
             # Downloads
             st.markdown('<div class="downloads">', unsafe_allow_html=True)
             with open(cleaned_output, "rb") as f:
-                st.download_button("⬇️ Cleaned", f, file_name=f"clean
+                st.download_button("⬇️ Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
+            with open(flagged_log, "rb") as f:
+                st.download_button("⬇️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+            with open(blocklist_file, "rb") as f:
+                st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Commit & cleanup
+            commit_blocklist_to_github()
+            cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+
+st.markdown('</div>', unsafe_allow_html=True)
