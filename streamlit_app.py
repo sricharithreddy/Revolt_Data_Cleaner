@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os, glob, subprocess
 from datetime import datetime
-# Ensure Revoltv11 is in your directory or path
 from Revoltv11 import process_file, load_blocklist
 
 # ====================================================
@@ -13,7 +12,7 @@ def commit_blocklist_to_github():
         token = st.secrets["GITHUB_TOKEN"]
         user = st.secrets["GITHUB_USER"]
         repo = st.secrets["GITHUB_REPO"]
-        remote_url = f"https://{user}:{token}@[github.com/](https://github.com/){user}/{repo}.git"
+        remote_url = f"https://{user}:{token}@github.com/{user}/{repo}.git"
 
         subprocess.run(["git", "config", "--global", "user.email", f"{user}@users.noreply.github.com"], check=True)
         subprocess.run(["git", "config", "--global", "user.name", user], check=True)
@@ -28,7 +27,7 @@ def commit_blocklist_to_github():
         subprocess.run(["git", "push", remote_url, "main"], check=True)
         st.success("✅ Blocklist committed to GitHub successfully.")
     except Exception as e:
-        st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN in secrets: {e}")
+        st.warning(f"⚠️ Could not commit blocklist: {e}")
 
 # ====================================================
 # Auto-cleanup old files
@@ -46,119 +45,29 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-# Using 'wide' layout for better left-alignment presentation
-st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="centered")
 
 # ====================================================
-# CSS Styling - MODIFIED FOR LEFT ALIGNMENT
-# ====================================================
-st.markdown(
-    """
-    <style>
-        /* General Layout & Background */
-        .main { background-color: #ffffff; }
-
-        /* Block Container: Content is now left-aligned */
-        .block-container {
-            padding-top: 30px;
-            padding-bottom: 20px;
-            text-align: left;
-        }
-        
-        /* Ensure the Streamlit image component is left-aligned */
-        div.stImage > img {
-            margin-left: 0 !important;
-            margin-right: auto;
-            display: block;
-        }
-
-        /* File Uploader: Align to the left of its container */
-        div[data-testid="stFileUploader"] { 
-            margin: 20px 0;
-            max-width: 500px; 
-        }
-
-        /* Custom Button Style (Primary Action): Left align in its div */
-        div.stButton {
-            text-align: left;
-        }
-        div.stButton > button:first-child {
-            background: linear-gradient(90deg, #e30613, #b0000d);
-            color: white; border: none; border-radius: 12px;
-            padding: 0.8em 1.5em; font-size: 17px; font-weight: 700;
-            margin-top: 25px; min-width: 250px;
-            box-shadow: 0 4px 10px rgba(227, 6, 19, 0.4);
-            transition: all 0.2s ease;
-            width: auto;
-        }
-        div.stButton > button:first-child:hover {
-            background: linear-gradient(90deg, #b0000d, #e30613);
-            box-shadow: 0 6px 15px rgba(227, 6, 19, 0.6);
-            transform: translateY(-2px);
-        }
-
-        /* Result Box - Aligned Left */
-        .result-box {
-            background: #fcfcfc;
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #e30613;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            margin-top: 35px;
-            text-align: left;
-            max-width: 650px;
-            margin-left: 0;
-            margin-right: auto;
-        }
-        .result-box h4 {
-            color: #333;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-top: 0;
-            font-weight: 700;
-        }
-        
-        /* Download Buttons Styling - Ensure headers align left */
-        .download-column-header {
-            text-align: left; 
-            font-weight: bold; 
-            margin-bottom: 10px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ====================================================
-# Header (Logo + Title) - ALIGNED LEFT
+# Branding
 # ====================================================
 if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", width=100) # Left-aligned in the 'wide' container
+    st.image("revolt_logo.png", width=180)
 else:
-    st.write("⚠️ Add revolt_logo.png to repo root")
+    st.warning("⚠️ Revolt logo not found. Please add revolt_logo.png")
 
-st.markdown(
-    """
-    <h1 style="text-align: left; margin-top: 5px; font-weight: 700; color: #333; font-size: 32px;">
-        Data Processor for AI
-    </h1>
-    <p style="text-align: left; color: #666; margin-bottom: 30px;">
-        Clean, filter, and prepare your data for machine learning models.
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("### Data Processor for AI", unsafe_allow_html=True)
 
+st.divider()
 
 # ====================================================
-# Upload + Processing
+# File Upload Section
 # ====================================================
-uploaded_file = st.file_uploader(
-    "Upload Excel/CSV", 
-    type=["xlsx", "xls", "csv"], 
-    help="Limit 300MB per file: XLSX, XLS, CSV"
-)
+st.subheader("📂 Upload Your File")
+uploaded_file = st.file_uploader("Upload Excel/CSV file", type=["xlsx", "xls", "csv"], label_visibility="collapsed")
 
+# ====================================================
+# Processing Logic
+# ====================================================
 if uploaded_file is not None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     input_path = f"uploaded_{timestamp}.xlsx"
@@ -166,112 +75,68 @@ if uploaded_file is not None:
     flagged_log = f"flagged_{timestamp}.txt"
     blocklist_file = "seen_feedback_mobiles.csv"
 
-    # Save the file
-    try:
-        with open(input_path, "wb") as f:
-            f.write(uploaded_file.read())
-    except Exception as e:
-        st.error(f"Failed to save uploaded file: {e}")
-        st.stop()
-        
-    # Button is left-aligned
-    if st.button("🚀 Run Processing"):
+    with open(input_path, "wb") as f:
+        f.write(uploaded_file.read())
+
+    if st.button("🚀 Run Processing", use_container_width=True):
         with st.spinner("⚡ Processing in progress..."):
-            try:
-                result = process_file(input_path, cleaned_output, flagged_log)
-            except Exception as e:
-                st.error(f"An error occurred during processing: {e}")
-                result = None
+            result = process_file(input_path, cleaned_output, flagged_log)
 
-        if result:
             # ================================
-            # Summary Card Calculation
+            # Process Summary (card-style container)
             # ================================
-            try:
-                cleaned_df = pd.ExcelFile(cleaned_output)
-                total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
-            except:
-                total_rows = 0
-            
-            try:
-                orig_df = pd.ExcelFile(input_path)
-                orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
-            except:
-                orig_rows = 0
-                
+            st.subheader("📊 Process Summary")
+
+            cleaned_df = pd.ExcelFile(cleaned_output)
+            total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
+            orig_df = pd.ExcelFile(input_path)
+            orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
             removed_rows = orig_rows - total_rows
-            total_blocklist = len(load_blocklist())
+
+            with st.container(border=True):
+                st.write("Here’s a breakdown of the processing results:")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Processed Rows", orig_rows)
+                    st.metric("Removed (Blocklisted)", removed_rows)
+                with col2:
+                    st.metric("Cleaned Rows", total_rows)
+                    st.metric("New Blocklist Entries", result["new_numbers"])
+
+                st.caption(f"📋 Current Blocklist Total: {len(load_blocklist())}")
 
             # ================================
-            # Summary Card (Aligned Left)
+            # Downloads Section
             # ================================
-            st.markdown(
-                f"""
-                <div class="result-box">
-                <h4>✅ Processing Complete</h4>
-                
-                <div style="display: flex; justify-content: space-between; gap: 20px; padding-bottom: 10px;">
-                    <div style="flex: 1; border-right: 1px solid #eee;">
-                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>Processed Rows</b></p>
-                        <h2 style="color: #333; margin-top: 0; font-size: 28px;">{orig_rows}</h2>
-                    </div>
-                    <div style="flex: 1; border-right: 1px solid #eee;">
-                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>Cleaned Rows</b></p>
-                        <h2 style="color: #008000; margin-top: 0; font-size: 28px;">{total_rows}</h2>
-                    </div>
-                    <div style="flex: 1;">
-                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>New Blocklisted</b></p>
-                        <h2 style="color: #e30613; margin-top: 0; font-size: 28px;">+{result['new_numbers']}</h2>
-                    </div>
-                </div>
-                
-                <hr style="margin-top: 10px; margin-bottom: 15px; border-color: #eee;">
-                
-                <p style="text-align: left; font-size: 14px; color: #555;">
-                    * <b>Removed Rows:</b> {removed_rows} (due to blocklist filtering)
-                    <br>
-                    * <b>Total Blocklist Size:</b> {total_blocklist} entries.
-                </p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.subheader("⬇️ Downloads")
 
-            # ================================
-            # Downloads Section (Aligned Left)
-            # ================================
-            st.markdown("---")
-            st.markdown('<h4>Download Results</h4>', unsafe_allow_html=True)
-            
-            # Create a 3-column layout for the downloads
-            col1, col2, col3, col_pad = st.columns([1, 1, 1, 2])
-            
-            # Cleaned file
-            with col1:
-                st.markdown('<div class="download-column-header">Cleaned Data</div>', unsafe_allow_html=True)
-                if os.path.exists("cleaned_logo.png"):
-                    st.image("cleaned_logo.png", width=50)
+            d1, d2, d3 = st.columns(3)
+
+            with d1:
                 with open(cleaned_output, "rb") as f:
-                    st.download_button("⬇️ Download Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
+                    st.download_button("📥 Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
 
-            # Flagged log
-            with col2:
-                st.markdown('<div class="download-column-header">Flagged Log</div>', unsafe_allow_html=True)
-                if os.path.exists("flagged_logo.png"):
-                    st.image("flagged_logo.png", width=50)
+            with d2:
                 with open(flagged_log, "rb") as f:
-                    st.download_button("⬇️ Download Flagged", f, file_name=f"flagged_{timestamp}.txt")
+                    st.download_button("📥 Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
 
-            # Blocklist
-            with col3:
-                st.markdown('<div class="download-column-header">Updated Blocklist</div>', unsafe_allow_html=True)
-                if os.path.exists("blocklist_logo.png"):
-                    st.image("blocklist_logo.png", width=50)
+            with d3:
                 with open(blocklist_file, "rb") as f:
-                    st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
-            
-            st.markdown("---")
-            
+                    st.download_button("📥 Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+
+            # ================================
+            # Blocklist Preview
+            # ================================
+            with st.expander("📋 Preview Blocklist (last 20 numbers)"):
+                try:
+                    blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
+                    st.dataframe(blocklist_df.tail(20), use_container_width=True)
+                except Exception:
+                    st.info("No blocklist data available.")
+
+            # ================================
             # GitHub Commit + Cleanup
+            # ================================
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
