@@ -48,6 +48,56 @@ def cleanup_old_files(keep_files):
 st.set_page_config(page_title="Revolt Data Processor", page_icon="⚡", layout="centered")
 
 # ====================================================
+# Global Styling (Revolt Motors theme)
+# ====================================================
+st.markdown(
+    """
+    <style>
+        .main { background-color: #f5f6f8; }
+
+        .block-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        /* CTA Button */
+        div.stButton > button:first-child {
+            background: linear-gradient(90deg, #e30613, #b0000d);
+            color: white; border: none; border-radius: 8px;
+            padding: 0.8em 1.2em; font-size: 16px; font-weight: 700;
+            margin-top: 15px; width: 100%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        div.stButton > button:first-child:hover {
+            background: linear-gradient(90deg, #b0000d, #e30613);
+            transform: scale(1.01);
+        }
+
+        /* Metrics Styling */
+        [data-testid="stMetricValue"] {
+            color: #e30613; font-weight: 700;
+        }
+
+        /* Downloads as cards */
+        .download-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .download-card img {
+            height: 40px; margin-bottom: 6px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ====================================================
 # Branding
 # ====================================================
 if os.path.exists("revolt_logo.png"):
@@ -60,7 +110,7 @@ st.markdown("### Data Processor for AI", unsafe_allow_html=True)
 st.divider()
 
 # ====================================================
-# File Upload Section
+# Upload Section
 # ====================================================
 st.subheader("📂 Upload Your File")
 uploaded_file = st.file_uploader("Upload Excel/CSV file", type=["xlsx", "xls", "csv"], label_visibility="collapsed")
@@ -83,7 +133,7 @@ if uploaded_file is not None:
             result = process_file(input_path, cleaned_output, flagged_log)
 
             # ================================
-            # Process Summary (card-style container)
+            # Process Summary
             # ================================
             st.subheader("📊 Process Summary")
 
@@ -93,18 +143,13 @@ if uploaded_file is not None:
             orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
             removed_rows = orig_rows - total_rows
 
-            with st.container(border=True):
-                st.write("Here’s a breakdown of the processing results:")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Processed Rows", orig_rows)
+            col2.metric("Cleaned Rows", total_rows)
+            col3.metric("Removed", removed_rows)
+            col4.metric("New Blocklist", result["new_numbers"])
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Processed Rows", orig_rows)
-                    st.metric("Removed (Blocklisted)", removed_rows)
-                with col2:
-                    st.metric("Cleaned Rows", total_rows)
-                    st.metric("New Blocklist Entries", result["new_numbers"])
-
-                st.caption(f"📋 Current Blocklist Total: {len(load_blocklist())}")
+            st.caption(f"📋 Current Blocklist Total: {len(load_blocklist())}")
 
             # ================================
             # Downloads Section
@@ -114,16 +159,28 @@ if uploaded_file is not None:
             d1, d2, d3 = st.columns(3)
 
             with d1:
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("cleaned_logo.png"):
+                    st.image("cleaned_logo.png")
                 with open(cleaned_output, "rb") as f:
-                    st.download_button("📥 Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
+                    st.download_button("Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with d2:
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("flagged_logo.png"):
+                    st.image("flagged_logo.png")
                 with open(flagged_log, "rb") as f:
-                    st.download_button("📥 Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
+                    st.download_button("Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with d3:
+                st.markdown('<div class="download-card">', unsafe_allow_html=True)
+                if os.path.exists("blocklist_logo.png"):
+                    st.image("blocklist_logo.png")
                 with open(blocklist_file, "rb") as f:
-                    st.download_button("📥 Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+                    st.download_button("Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
             # ================================
             # Blocklist Preview
