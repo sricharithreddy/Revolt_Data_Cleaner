@@ -54,9 +54,17 @@ st.markdown(
     """
     <style>
         .main { background-color: #f5f6f8; }
-        .block-container { max-width: 700px; margin: auto; text-align: center; }
 
-        /* Upload Box */
+        /* Keep everything aligned in center row-wise */
+        .block-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;   /* horizontal center */
+            padding-top: 25px;     /* small breathing space */
+            text-align: center;
+        }
+
+        /* Upload box */
         div[data-testid="stFileUploader"] { margin: 0 auto; }
 
         /* Run Button */
@@ -80,7 +88,7 @@ st.markdown(
             text-align: left;
         }
 
-        /* Download section */
+        /* Download grid */
         .download-grid {
             display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap;
         }
@@ -94,16 +102,13 @@ st.markdown(
         .download-card img {
             height: 40px; margin-bottom: 8px;
         }
-        .download-card button {
-            width: 100%;
-        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # ====================================================
-# Logo
+# Logo + Title
 # ====================================================
 if os.path.exists("revolt_logo.png"):
     st.image("revolt_logo.png", width=150)
@@ -113,7 +118,7 @@ else:
 st.markdown("### ⚡ Data Cleaning Dashboard")
 
 # ====================================================
-# Upload
+# Upload + Processing
 # ====================================================
 uploaded_file = st.file_uploader("Upload Excel/CSV", type=["xlsx", "xls", "csv"])
 
@@ -131,7 +136,9 @@ if uploaded_file is not None:
         with st.spinner("⚡ Cleaning in progress..."):
             result = process_file(input_path, cleaned_output, flagged_log)
 
-            # Summary
+            # ================================
+            # Summary Card
+            # ================================
             cleaned_df = pd.ExcelFile(cleaned_output)
             total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
             orig_df = pd.ExcelFile(input_path)
@@ -154,9 +161,9 @@ if uploaded_file is not None:
                 unsafe_allow_html=True
             )
 
-            # ====================================================
-            # Downloads Section (with logos)
-            # ====================================================
+            # ================================
+            # Downloads Section
+            # ================================
             st.markdown('<div class="download-grid">', unsafe_allow_html=True)
 
             # Cleaned file
@@ -164,7 +171,7 @@ if uploaded_file is not None:
                 st.markdown('<div class="download-card">', unsafe_allow_html=True)
                 if os.path.exists("cleaned_logo.png"):
                     st.image("cleaned_logo.png")
-                st.download_button("⬇️ Download Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
+                st.download_button("⬇️ Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             # Flagged log
@@ -172,7 +179,7 @@ if uploaded_file is not None:
                 st.markdown('<div class="download-card">', unsafe_allow_html=True)
                 if os.path.exists("flagged_logo.png"):
                     st.image("flagged_logo.png")
-                st.download_button("⬇️ Download Flagged", f, file_name=f"flagged_{timestamp}.txt")
+                st.download_button("⬇️ Flagged", f, file_name=f"flagged_{timestamp}.txt")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             # Blocklist
@@ -180,13 +187,11 @@ if uploaded_file is not None:
                 st.markdown('<div class="download-card">', unsafe_allow_html=True)
                 if os.path.exists("blocklist_logo.png"):
                     st.image("blocklist_logo.png")
-                st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+                st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # ====================================================
-            # GitHub commit + cleanup
-            # ====================================================
+            # GitHub Commit + Cleanup
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
