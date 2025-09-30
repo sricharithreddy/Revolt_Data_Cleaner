@@ -1,161 +1,131 @@
 import pandas as pd
 import re
-import os
-from typing import List, Dict, Optional
 from datetime import datetime
+import os
 
-def split_camel_case(name: str) -> str:
-    if not name or not isinstance(name, str):
+# ====================================================
+# Utility Functions
+# ====================================================
+def clean_customer_name(name: str) -> str:
+    if pd.isna(name):
         return ""
-    if any(c.islower() for c in name):
-        parts = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', name)
-        return " ".join(parts.split())
-    return name
+    # Remove extra spaces, special chars, uppercase consistently
+    name = re.sub(r"[^A-Za-z0-9\s]", "", str(name))
+    name = re.sub(r"\s+", " ", name).strip()
+    return name.title()
 
-def is_sensible_name(name: str, original_name: str, row_index: Optional[int], logs: List[Dict]) -> bool:
-    if not name or not isinstance(name, str):
-        logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "empty_or_invalid_input"})
-        return False
-    lower_name = name.lower().strip()
-    blacklist = [
-        "joker","k","ccc","aaa","busy","king","spam","failureboys",
-        "radhe radhe","jai mata di","jaisairam","shubh din",
-        "emergency enquiry","spam callers","black world",
-        "indian soldiers lover","miss youu guruji","sss","adc",
-        "dsp","ettlement","ww wmeresathi","bsnl fiber","null",
-        "lets learn","typing","always be positive","it doesnt matter",
-        "next","rss","vvv","ggg","kk","ok","lead","test","dummy","na","abc","hotel"
-    ]
-    if lower_name in blacklist:
-        logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "blacklist_match"})
-        return False
-    if len(lower_name) < 2:
-        logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "too_short"})
-        return False
-    if re.match(r'^\d+$', lower_name):
-        logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "numeric"})
-        return False
-    if not re.search(r'[aeiou]', lower_name):
-        logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "no_vowels"})
-        return False
-    return True
-
-def clean_customer_name(name: str, row_index: Optional[int], logs: List[Dict]) -> str:
-    original_name = name
-    if pd.isna(name) or not isinstance(name, str) or not name.strip():
-        logs.append({"index": row_index, "original": original_name, "cleaned": "", "reason": "empty_or_invalid_input"})
+def clean_mobile_number(num) -> str:
+    if pd.isna(num):
         return ""
-    name = name.strip()
-    bike_models_to_remove = ["RV1","RV400","RV400BRZ","RV1+","RV BLAZEX","RV-400","RV 400","RV BLAZE","RV BLAZE X"]
-    pattern = re.compile("(" + "|".join(re.escape(w) for w in bike_models_to_remove) + ")", re.IGNORECASE)
-    name = pattern.sub("", name).strip()
-    name = re.sub(r"[-_\.0-9!@#$%^&*()+=?/,<>;:\"\\|{}\[\]~`]", "", name)
-    name = re.sub(r'\s+', ' ', name).strip()
-    if not name:
-        logs.append({"index": row_index, "original": original_name, "cleaned": "", "reason": "no_valid_characters_after_cleaning"})
-        return ""
-    cleaned = split_camel_case(name)
-    cleaned = ' '.join(w.capitalize() for w in cleaned.split())
-    if not is_sensible_name(cleaned, original_name, row_index, logs):
-        return ""
-    return cleaned
-
-def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Dict]) -> str:
-    if pd.isna(raw_mobile):
-        logs.append({"index": row_index, "original": raw_mobile, "cleaned_mobile": "", "reason": "mobile_is_na"})
-        return ""
-    digits = re.sub(r'\D','', str(raw_mobile).strip())
-    if len(digits) == 10:
-        return digits
-    if len(digits) > 10:
-        return digits[-10:]
-    logs.append({"index": row_index, "original": raw_mobile, "cleaned_mobile": "", "reason": "invalid_length"})
+    num = re.sub(r"\D", "", str(num))  # Keep only digits
+    # Keep 10 digit valid numbers only
+    if len(num) == 10:
+        return num
     return ""
 
-def process_file(input_file_path: str, output_file_path: str, flagged_log_path: str = "flagged_names.txt"):
-    logs: List[Dict] = []
-    today_str = datetime.today().strftime("%Y-%m-%d")
+def clean_date(val) -> str:
+    """Convert to '21st September' style format (no year)."""
+    if pd.isna(val):
+        return ""
+    try:
+        dt = pd.to_datetime(val, errors="coerce")
+        if pd.isna(dt):
+            return ""
+        day = dt.day
+        suffix = "th"
+        if day in [1, 21, 31]:
+            suffix = "st"
+        elif day in [2, 22]:
+            suffix = "nd"
+        elif day in [3, 23]:
+            suffix = "rd"
+        return f"{day}{suffix} {dt.strftime('%B')}"
+    except Exception:
+        return str(val)
 
-    # Column rename rules
-    rename_rules = {
-        "mobilenumber": "Mobile Number",
-        "buyername": "Customer Name",
-        "testridedateandtimeactual": "trscheduleactual"
-    }
+# ====================================================
+# Load and Save Blocklist
+# ====================================================
+BLOCKLIST_FILE = "seen_feedback_mobiles.csv"
 
-    # Load input
-    if input_file_path.lower().endswith(('.xlsx','.xls')):
-        all_sheets = pd.read_excel(input_file_path, sheet_name=None)
-    elif input_file_path.lower().endswith('.csv'):
-        all_sheets = {"Sheet1": pd.read_csv(input_file_path)}
+def load_blocklist():
+    if os.path.exists(BLOCKLIST_FILE):
+        return pd.read_csv(BLOCKLIST_FILE, dtype=str)
     else:
-        raise ValueError("Unsupported format")
+        return pd.DataFrame(columns=["Mobile Number", "DateAdded"])
 
-    # --------------------
-    # Load Blocklist with Date
-    # --------------------
-    blocklist_file = "seen_feedback_mobiles.csv"
-    if os.path.exists(blocklist_file):
-        seen_df = pd.read_csv(blocklist_file)
-        if "DateAdded" not in seen_df.columns:
-            seen_df["DateAdded"] = today_str  # fallback for old format
-    else:
-        seen_df = pd.DataFrame(columns=["Mobile Number", "DateAdded"])
+def save_blocklist(df: pd.DataFrame):
+    df.to_csv(BLOCKLIST_FILE, index=False)
 
-    seen_dict = dict(zip(seen_df["Mobile Number"].astype(str), seen_df["DateAdded"]))
-    new_numbers = {}
-    cleaned_sheets = {}
+# ====================================================
+# Main Processing
+# ====================================================
+def process_file(input_file: str, cleaned_output: str, flagged_log: str):
+    today = datetime.now().strftime("%Y-%m-%d")
+    blocklist = load_blocklist()
 
-    # --------------------
-    # Cleaning Loop
-    # --------------------
-    for sheet_name, df in all_sheets.items():
-        df = df.rename(columns=lambda c: rename_rules.get(c.lower().strip(), c))
+    # Container for cleaned sheets
+    writer = pd.ExcelWriter(cleaned_output, engine="xlsxwriter")
+    flagged_rows = []
 
+    # Read file
+    xls = pd.ExcelFile(input_file)
+
+    for sheet in xls.sheet_names:
+        df = xls.parse(sheet)
+
+        # Normalize column names
+        df.columns = [c.strip().lower().replace("-", "").replace(" ", "") for c in df.columns]
+
+        # Rename rules
+        col_map = {
+            "mobilenumber": "Mobile Number",
+            "buyername": "Customer Name",
+            "testridedateandtimeactual": "trscheduleactual",
+            "trcompleteddate": "trcompleteddate"
+        }
+        df.rename(columns=col_map, inplace=True)
+
+        # Clean columns if present
+        if "Customer Name" in df.columns:
+            df["Customer Name"] = df["Customer Name"].apply(clean_customer_name)
         if "Mobile Number" in df.columns:
-            df["Mobile Number"] = [clean_mobile_number(val, idx, logs) for idx, val in df["Mobile Number"].items()]
+            df["Mobile Number"] = df["Mobile Number"].apply(clean_mobile_number)
+        if "trcompleteddate" in df.columns:
+            df["trcompleteddate"] = df["trcompleteddate"].apply(clean_date)
+        if "trscheduleactual" in df.columns:
+            df["trscheduleactual"] = df["trscheduleactual"].apply(clean_date)
 
-            # Apply blocking rule: remove if added before today
-            df = df[df["Mobile Number"].apply(
-                lambda x: not (x in seen_dict and seen_dict[x] < today_str)
+        # ------------------------------------------------
+        # Blocklist Handling
+        # ------------------------------------------------
+        if "Mobile Number" in df.columns:
+            # For "calls" and "TR_Completed*" sheets → seed blocklist
+            if sheet.lower() == "calls" or sheet.lower().startswith("tr_completed"):
+                new_entries = []
+                for num in df["Mobile Number"].dropna().unique():
+                    if num == "":
+                        continue
+                    # Check if already in blocklist with today's date
+                    already_today = not blocklist[
+                        (blocklist["Mobile Number"] == num) & (blocklist["DateAdded"] == today)
+                    ].empty
+                    if not already_today:
+                        if num not in blocklist["Mobile Number"].values:
+                            new_entries.append({"Mobile Number": num, "DateAdded": today})
+                if new_entries:
+                    blocklist = pd.concat([blocklist, pd.DataFrame(new_entries)], ignore_index=True)
+
+            # Remove rows with numbers in blocklist (added before today)
+            df = df[~df["Mobile Number"].isin(
+                blocklist.loc[blocklist["DateAdded"] < today, "Mobile Number"]
             )]
 
-        if "Customer Name" in df.columns:
-            df["Customer Name"] = [clean_customer_name(val, idx, logs) for idx, val in df["Customer Name"].items()]
+        # Save cleaned sheet
+        df.to_excel(writer, sheet_name=sheet[:31], index=False)
 
-        # Check for TR_Completed-like sheet
-        if sheet_name.lower().startswith("tr_completed") and "Mobile Number" in df.columns:
-            for num in df["Mobile Number"]:
-                if num and num not in seen_dict:
-                    new_numbers[num] = today_str
+    writer.close()
+    save_blocklist(blocklist)
 
-        cleaned_sheets[sheet_name] = df
-
-    # --------------------
-    # Update Blocklist with New Numbers
-    # --------------------
-    if new_numbers:
-        new_entries = pd.DataFrame(list(new_numbers.items()), columns=["Mobile Number", "DateAdded"])
-        seen_df = pd.concat([seen_df, new_entries], ignore_index=True)
-        seen_df.drop_duplicates(subset=["Mobile Number", "DateAdded"], keep="first", inplace=True)
-        seen_df.to_csv(blocklist_file, index=False)
-
-    # Save cleaned Excel
-    with pd.ExcelWriter(output_file_path, engine="xlsxwriter") as writer:
-        for sheet_name, df in cleaned_sheets.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-    # Save flagged log
-    with open(flagged_log_path, "w", encoding="utf-8") as f:
-        f.write("index,original,cleaned,reason\n")
-        for entry in logs:
-            idx = entry.get("index", "")
-            orig = str(entry.get("original", "")).replace("\n"," ").replace(","," ")
-            cleaned = entry.get("cleaned", entry.get("cleaned_mobile",""))
-            reason = entry.get("reason","")
-            f.write(f"{idx},{orig},{cleaned},{reason}\n")
-
-    return {
-        "new_numbers": len(new_numbers),
-        "seeded": 0  # no seeding here, handled earlier
-    }
+    # Return stats
+    return {"new_numbers": len(blocklist)}
