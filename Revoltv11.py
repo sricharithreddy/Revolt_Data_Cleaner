@@ -94,6 +94,7 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
     # --------------------
     blocklist_file = "seen_feedback_mobiles.csv"
     seen_set = set()
+    seeded_count = 0
     if os.path.exists(blocklist_file):
         seen_df = pd.read_csv(blocklist_file)
         seen_set = set(str(x).strip() for x in seen_df['Mobile Number'] if str(x).strip())
@@ -112,6 +113,7 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
                             mobiles.append(digits[-10:])
                     seen_set = set(mobiles)
                     pd.Series(sorted(seen_set), name="Mobile Number").to_csv(blocklist_file, index=False)
+                    seeded_count = len(seen_set)
             except Exception as e:
                 print(f"Seeding blocklist failed: {e}")
 
@@ -154,4 +156,7 @@ def process_file(input_file_path: str, output_file_path: str, flagged_log_path: 
             reason = entry.get("reason","")
             f.write(f"{idx},{orig},{cleaned},{reason}\n")
 
-    return len(new_numbers)
+    return {
+        "new_numbers": len(new_numbers),
+        "seeded": seeded_count
+    }
