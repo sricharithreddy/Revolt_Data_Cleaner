@@ -49,7 +49,7 @@ if os.path.exists("bike.json"):
 # ------------------------
 # Custom CSS Styling
 # ------------------------
-st.markdown("""
+st.markdown(""
     <style>
     html, body, [class*="css"]  {
         font-family: 'Inter', sans-serif;
