@@ -9,7 +9,7 @@ from Revoltv11 import process_file, load_blocklist # Assuming this module is cor
 # ====================================================
 def commit_blocklist_to_github():
     try:
-        # Use st.secrets for a production app, mock for local testing if needed
+        # Using st.secrets for production setup
         token = st.secrets["GITHUB_TOKEN"]
         user = st.secrets["GITHUB_USER"]
         repo = st.secrets["GITHUB_REPO"]
@@ -29,8 +29,7 @@ def commit_blocklist_to_github():
         subprocess.run(["git", "push", remote_url, "main"], check=True)
         st.success("✅ Blocklist committed to GitHub successfully.")
     except Exception as e:
-        # Catch errors if running locally without secrets or git setup
-        st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN in secrets: {e}")
+        st.warning(f"⚠️ Could not commit blocklist. Check git setup and GITHUB_TOKEN: {e}")
 
 # ====================================================
 # Auto-cleanup old files
@@ -63,11 +62,11 @@ st.markdown(
         .block-container {
             padding-top: 30px;
             padding-bottom: 20px;
-            /* Using centered layout, but ensure text is centered in the header */
             text-align: center;
         }
 
         /* Centering the File Uploader */
+        /* The default Streamlit file uploader is already centered in a 'centered' layout. */
         div[data-testid="stFileUploader"] { margin: 20px auto; max-width: 500px; }
 
         /* Custom Button Style (Primary Action) */
@@ -105,23 +104,10 @@ st.markdown(
             margin-top: 0;
             font-weight: 700;
         }
-        .result-box ul {
-            list-style-type: none;
-            padding: 0;
-            line-height: 1.8;
-        }
-        .result-box li {
-            font-size: 16px;
-            color: #555;
-        }
-        .result-box b {
-            font-weight: 600;
-            color: #222;
-        }
-
-        /* Download Buttons Styling */
+        
+        /* Download Buttons Styling (for secondary actions) */
         div.stDownloadButton > button {
-            background-color: #007bff; /* Generic secondary action color, or a lighter red */
+            background-color: #007bff; 
             color: white; border: none; border-radius: 8px;
             padding: 0.6em 1em; font-size: 15px; font-weight: 600;
             width: 100%;
@@ -147,7 +133,8 @@ st.markdown(
 # ====================================================
 st.markdown('<div class="logo-container">', unsafe_allow_html=True)
 if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", width=120)  # slightly smaller for modern feel
+    # Logo is now centered via CSS applied to logo-container
+    st.image("revolt_logo.png", width=120)
 else:
     st.write("⚠️ Add revolt_logo.png to repo root")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -171,7 +158,7 @@ st.markdown(
 uploaded_file = st.file_uploader(
     "Upload Excel/CSV", 
     type=["xlsx", "xls", "csv"], 
-    help="Limit 300MB per file: XLSX, XLS, CSV" # Added the limit text to the file_uploader for clarity
+    help="Limit 300MB per file: XLSX, XLS, CSV"
 )
 
 if uploaded_file is not None:
@@ -205,11 +192,10 @@ if uploaded_file is not None:
             # Summary Card Calculation
             # ================================
             try:
-                # Need to check if cleaned_output exists and is a valid Excel file
                 cleaned_df = pd.ExcelFile(cleaned_output)
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
             except:
-                total_rows = 0 # Handle case where the output file might not be created on error
+                total_rows = 0
             
             try:
                 orig_df = pd.ExcelFile(input_path)
@@ -218,8 +204,7 @@ if uploaded_file is not None:
                 orig_rows = 0
                 
             removed_rows = orig_rows - total_rows
-            
-            total_blocklist = len(load_blocklist()) # Load the latest count after processing
+            total_blocklist = len(load_blocklist())
 
             # ================================
             # Summary Card (Cleaned Look)
@@ -229,22 +214,22 @@ if uploaded_file is not None:
                 <div class="result-box">
                 <h4>✅ Processing Complete</h4>
                 
-                <div style="display: flex; justify-content: space-between; gap: 20px;">
-                    <div style="flex: 1;">
-                        <p style="font-size: 16px; margin-bottom: 5px;"><b>Processed Rows</b></p>
-                        <h2 style="color: #e30613; margin-top: 0;">{orig_rows}</h2>
+                <div style="display: flex; justify-content: space-between; gap: 20px; padding-bottom: 10px;">
+                    <div style="flex: 1; border-right: 1px solid #eee;">
+                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>Processed Rows</b></p>
+                        <h2 style="color: #333; margin-top: 0; font-size: 28px;">{orig_rows}</h2>
+                    </div>
+                    <div style="flex: 1; border-right: 1px solid #eee;">
+                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>Cleaned Rows</b></p>
+                        <h2 style="color: #008000; margin-top: 0; font-size: 28px;">{total_rows}</h2>
                     </div>
                     <div style="flex: 1;">
-                        <p style="font-size: 16px; margin-bottom: 5px;"><b>Cleaned Rows</b></p>
-                        <h2 style="color: #008000; margin-top: 0;">{total_rows}</h2>
-                    </div>
-                    <div style="flex: 1;">
-                        <p style="font-size: 16px; margin-bottom: 5px;"><b>New Blocklisted</b></p>
-                        <h2 style="color: #ffaa00; margin-top: 0;">+{result['new_numbers']}</h2>
+                        <p style="font-size: 16px; margin-bottom: 5px; color: #555;"><b>New Blocklisted</b></p>
+                        <h2 style="color: #e30613; margin-top: 0; font-size: 28px;">+{result['new_numbers']}</h2>
                     </div>
                 </div>
                 
-                <hr style="margin-top: 20px; margin-bottom: 10px; border-color: #eee;">
+                <hr style="margin-top: 10px; margin-bottom: 15px; border-color: #eee;">
                 
                 <p style="text-align: left; font-size: 14px; color: #555;">
                     * <b>Removed Rows:</b> {removed_rows} (due to blocklist filtering)
@@ -257,7 +242,7 @@ if uploaded_file is not None:
             )
 
             # ================================
-            # Downloads Section (Using st.columns)
+            # Downloads Section
             # ================================
             st.markdown("---")
             st.markdown('<h4 style="text-align: center; margin-top: 30px; margin-bottom: 20px;">Download Results</h4>', unsafe_allow_html=True)
@@ -287,7 +272,6 @@ if uploaded_file is not None:
                 if os.path.exists("blocklist_logo.png"):
                     st.image("blocklist_logo.png", width=50)
                 with open(blocklist_file, "rb") as f:
-                    # Note: We download the potentially updated local copy
                     st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
             
             st.markdown("---")
