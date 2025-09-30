@@ -19,7 +19,12 @@ LOGO_PATH = "revolt_logo.png"
 logo_html = ""
 if os.path.exists(LOGO_PATH):
     logo_base64 = get_base64_of_bin_file(LOGO_PATH)
-    logo_html = f'<img src="data:image/png;base64,{logo_base64}" width="120" style="margin-right:15px;">'
+    # ✅ Larger logo (180px) + pulse animation
+    logo_html = f'''
+    <img src="data:image/png;base64,{logo_base64}" 
+         width="180" 
+         style="margin-right:15px; animation: pulse 2s infinite;">
+    '''
 
 # ------------------------
 # Page Config
@@ -88,6 +93,12 @@ st.markdown("""
         max-width: 650px;
         margin: 20px auto;
     }
+    /* Pulse animation for logo */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -126,12 +137,11 @@ if uploaded_file:
     # ------------------------
     if bike_anim:
         st.markdown("<h3 style='text-align:center;'>Ready to Clean?</h3>", unsafe_allow_html=True)
-        st_lottie(bike_anim, speed=1, width=220, height=220, key="bike")
+        st_lottie(bike_anim, speed=1, width=280, height=200, key="bike")
 
     if st.button("🏍️ Run Cleaning", use_container_width=True):
         result = process_file(input_path, cleaned_output, flagged_log)
         new_count = result["new_numbers"]
-        seeded_count = result["seeded"]
 
         # Compute stats safely
         cleaned_df = pd.ExcelFile(cleaned_output)
@@ -147,16 +157,12 @@ if uploaded_file:
 
         blocklist_size = 0
         if os.path.exists("seen_feedback_mobiles.csv"):
-            with open("seen_feedback_mobiles.csv", encoding="utf-8") as f:
-                blocklist_size = sum(1 for _ in f) - 1
+            seen_df = pd.read_csv("seen_feedback_mobiles.csv")
+            blocklist_size = len(seen_df)
 
         # ------------------------
         # Process Summary Panel
         # ------------------------
-        seed_msg = ""
-        if seeded_count > 0:
-            seed_msg = f"<p>🌱 <b>Blocklist seeded:</b> {seeded_count:,} numbers loaded from <i>Calling Data.xlsx</i></p>"
-
         st.markdown(
             f"""
             <div class="summary-card">
@@ -165,7 +171,6 @@ if uploaded_file:
                 <p>📤 <b>Cleaned File:</b> {total_rows:,} rows</p>
                 <p>🚫 <b>Removed (blocklisted):</b> {removed_rows:,} rows</p>
                 <p>📋 <b>Blocklist:</b> +{new_count:,} new (now total {blocklist_size:,})</p>
-                {seed_msg}
             </div>
             """,
             unsafe_allow_html=True
