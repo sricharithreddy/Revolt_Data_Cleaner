@@ -4,16 +4,9 @@ import tempfile
 import pandas as pd
 from datetime import datetime
 import base64
+import json
+from streamlit_lottie import st_lottie
 from Revoltv11 import process_file
-
-# ------------------------
-# Page Config
-# ------------------------
-st.set_page_config(
-    page_title="Revolt Data Cleaner",
-    page_icon="⚡",
-    layout="centered"
-)
 
 # ------------------------
 # Helper: Encode logo as base64
@@ -29,18 +22,36 @@ if os.path.exists(LOGO_PATH):
     logo_html = f'<img src="data:image/png;base64,{logo_base64}" width="120" style="margin-right:15px;">'
 
 # ------------------------
+# Page Config
+# ------------------------
+st.set_page_config(
+    page_title="Revolt Data Cleaner",
+    page_icon="⚡",
+    layout="centered"
+)
+
+# ------------------------
+# Load Lottie Animation
+# ------------------------
+def load_lottiefile(filepath: str):
+    with open(filepath, "r") as f:
+        return json.load(f)
+
+bike_anim = None
+if os.path.exists("bike.json"):
+    bike_anim = load_lottiefile("bike.json")
+
+# ------------------------
 # Custom CSS Styling
 # ------------------------
 st.markdown("""
     <style>
-    /* Global font */
     html, body, [class*="css"]  {
         font-family: 'Inter', sans-serif;
     }
     h1, h2, h3 {
         font-weight: 700 !important;
     }
-    /* Run button */
     .stButton>button {
         background: linear-gradient(90deg, #e30613, #b0000d);
         color: white;
@@ -55,7 +66,6 @@ st.markdown("""
         background: linear-gradient(90deg, #b0000d, #7a0009);
         transform: scale(1.02);
     }
-    /* Download buttons */
     .stDownloadButton>button {
         border-radius: 8px;
         border: 1px solid #ddd;
@@ -69,7 +79,6 @@ st.markdown("""
         border-color: #e30613;
         color: #e30613;
     }
-    /* Card style for summary */
     .summary-card {
         padding: 20px;
         border-radius: 15px;
@@ -112,22 +121,42 @@ if uploaded_file:
     cleaned_output = "cleaned_output.xlsx"
     flagged_log = "flagged_log.txt"
 
-    if st.button("🚀 Run Cleaning", use_container_width=True):
-        # Run backend cleaning
-        new_count = process_file(input_path, cleaned_output, flagged_log)
+    # ------------------------
+    # Animation + Run Button
+    # ------------------------
+    if bike_anim:
+        st.markdown("<h3 style='text-align:center;'>Ready to Clean?</h3>", unsafe_allow_html=True)
+        st_lottie(bike_anim, speed=1, width=220, height=220, key="bike")
 
-        # Compute stats
+    if st.button("🏍️ Run Cleaning", use_container_width=True):
+        result = process_file(input_path, cleaned_output, flagged_log)
+        new_count = result["new_numbers"]
+        seeded_count = result["seeded"]
+
+        # Compute stats safely
         cleaned_df = pd.ExcelFile(cleaned_output)
         total_rows = sum(len(cleaned_df.parse(sheet)) for sheet in cleaned_df.sheet_names)
         original_file = pd.ExcelFile(input_path)
         orig_rows = sum(len(original_file.parse(sheet)) for sheet in original_file.sheet_names)
         removed_rows = orig_rows - total_rows
-        flagged_rows = sum(1 for _ in open(flagged_log, encoding="utf-8")) - 1
-        blocklist_size = sum(1 for _ in open("seen_feedback_mobiles.csv", encoding="utf-8")) - 1
+
+        flagged_rows = 0
+        if os.path.exists(flagged_log):
+            with open(flagged_log, encoding="utf-8") as f:
+                flagged_rows = sum(1 for _ in f) - 1
+
+        blocklist_size = 0
+        if os.path.exists("seen_feedback_mobiles.csv"):
+            with open("seen_feedback_mobiles.csv", encoding="utf-8") as f:
+                blocklist_size = sum(1 for _ in f) - 1
 
         # ------------------------
         # Process Summary Panel
         # ------------------------
+        seed_msg = ""
+        if seeded_count > 0:
+            seed_msg = f"<p>🌱 <b>Blocklist seeded:</b> {seeded_count:,} numbers loaded from <i>Calling Data.xlsx</i></p>"
+
         st.markdown(
             f"""
             <div class="summary-card">
@@ -136,6 +165,7 @@ if uploaded_file:
                 <p>📤 <b>Cleaned File:</b> {total_rows:,} rows</p>
                 <p>🚫 <b>Removed (blocklisted):</b> {removed_rows:,} rows</p>
                 <p>📋 <b>Blocklist:</b> +{new_count:,} new (now total {blocklist_size:,})</p>
+                {seed_msg}
             </div>
             """,
             unsafe_allow_html=True
