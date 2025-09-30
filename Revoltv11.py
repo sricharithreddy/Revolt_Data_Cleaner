@@ -75,7 +75,7 @@ def process_file(input_file: str, cleaned_output: str, flagged_log: str):
         # Normalize column names
         df.columns = [c.strip().lower().replace("-", "").replace(" ", "") for c in df.columns]
 
-        # Rename rules (now includes "mobile_number")
+        # Rename rules (handle mobile_number and mobilenum variations)
         col_map = {
             "mobilenumber": "Mobile Number",
             "mobile_number": "Mobile Number",
@@ -101,8 +101,22 @@ def process_file(input_file: str, cleaned_output: str, flagged_log: str):
         if "Mobile Number" in df.columns:
             sheet_clean = sheet.strip().lower()
 
-            # ✅ Seed only from "calls" or "tr_completed*" sheets
-            if sheet_clean == "calls" or sheet_clean.startswith("tr_completed"):
+            # ✅ Calls sheet: seed & block immediately
+            if sheet_clean == "calls":
+                new_entries = []
+                for num in df["Mobile Number"].dropna().unique():
+                    if num == "":
+                        continue
+                    if num not in blocklist["Mobile Number"].values:
+                        new_entries.append({"Mobile Number": num, "DateAdded": today})
+                if new_entries:
+                    blocklist = pd.concat([blocklist, pd.DataFrame(new_entries)], ignore_index=True)
+
+                # Remove all numbers in blocklist, even today
+                df = df[~df["Mobile Number"].isin(blocklist["Mobile Number"])]
+
+            # ✅ TR_Completed sheets: seed but block only from tomorrow
+            elif sheet_clean.startswith("tr_completed"):
                 new_entries = []
                 for num in df["Mobile Number"].dropna().unique():
                     if num == "":
@@ -116,10 +130,10 @@ def process_file(input_file: str, cleaned_output: str, flagged_log: str):
                 if new_entries:
                     blocklist = pd.concat([blocklist, pd.DataFrame(new_entries)], ignore_index=True)
 
-            # ✅ Remove rows if number in blocklist before today
-            df = df[~df["Mobile Number"].isin(
-                blocklist.loc[blocklist["DateAdded"] < today, "Mobile Number"]
-            )]
+                # Remove only numbers added before today
+                df = df[~df["Mobile Number"].isin(
+                    blocklist.loc[blocklist["DateAdded"] < today, "Mobile Number"]
+                )]
 
         # Save cleaned sheet
         df.to_excel(writer, sheet_name=sheet[:31], index=False)
