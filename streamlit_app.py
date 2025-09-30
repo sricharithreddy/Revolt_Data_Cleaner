@@ -8,7 +8,7 @@ import glob
 import base64
 
 # ====================================================
-# Helper: Load logo as Base64 (to ensure it works on Streamlit Cloud)
+# Helper: Load logo as Base64
 # ====================================================
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -57,50 +57,43 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Streamlit Page Config
 # ====================================================
-st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
+st.set_page_config(page_title="Revolt Dashboard", layout="wide")
 
 # ====================================================
-# Global CSS Styling (Dashboard look)
+# CSS Styling (Minimal & Professional)
 # ====================================================
 st.markdown(
     """
     <style>
-        /* Page background */
+        /* Background */
         .main {
-            background-color: #f7f9fb;
+            background-color: #f5f6f8;
         }
         /* Center content */
         .block-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 20px;
-            max-width: 1000px;
+            padding-top: 30px;
+            max-width: 900px;
         }
-        /* Card styling */
-        .card {
+        /* Upload container */
+        .box {
             background: #ffffff;
             padding: 25px 35px;
-            border-radius: 14px;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-            max-width: 520px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+            max-width: 480px;
             width: 100%;
             text-align: center;
-            margin-top: 25px;
+            margin-top: 20px;
         }
-        /* Section title */
-        .card h3 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 18px;
-            color: #333;
-        }
-        /* File uploader alignment */
+        /* File uploader center alignment */
         div[data-testid="stFileUploader"] {
             display: flex;
             justify-content: center;
         }
-        /* CTA Button */
+        /* Run Button */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white;
@@ -117,7 +110,7 @@ st.markdown(
             background: linear-gradient(90deg, #b0000d, #e30613);
             transform: scale(1.02);
         }
-        /* Download buttons inline */
+        /* Download buttons row */
         .downloads {
             display: flex;
             justify-content: center;
@@ -141,28 +134,27 @@ st.markdown(
 )
 
 # ====================================================
-# Logo + Header
+# Logo (smaller size to fit fully)
 # ====================================================
 if os.path.exists("revolt_logo.png"):
     logo_base64 = get_base64_image("revolt_logo.png")
     st.markdown(
         f"""
-        <div style="display:flex;justify-content:center;margin-bottom:10px;">
-            <img src="data:image/png;base64,{logo_base64}" width="220">
+        <div style="display:flex;justify-content:center;margin-bottom:5px;">
+            <img src="data:image/png;base64,{logo_base64}" width="160">
         </div>
         """,
         unsafe_allow_html=True
     )
-
-st.markdown("<h2 style='text-align:center; color:#222;'>📊 Revolt Data Cleaner Dashboard</h2>", unsafe_allow_html=True)
+else:
+    st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
-# Upload + Processing Card
+# Upload + Process Section (Compact Box)
 # ====================================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown('<div class="box">', unsafe_allow_html=True)
 
-st.markdown("### 📂 Upload Excel File")
-uploaded_file = st.file_uploader("Choose a file", type=["xlsx"])
+uploaded_file = st.file_uploader("", type=["xlsx"])
 
 if uploaded_file is not None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -184,7 +176,6 @@ if uploaded_file is not None:
         orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
         removed_rows = orig_rows - total_rows
 
-        st.markdown("### 📊 Process Summary")
         st.success(
             f"""
             ✅ **Processed:** {orig_rows} rows  
@@ -198,9 +189,9 @@ if uploaded_file is not None:
         # Download buttons inline
         st.markdown('<div class="downloads">', unsafe_allow_html=True)
         with open(cleaned_output, "rb") as f:
-            st.download_button("⬇️ Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
+            st.download_button("⬇️ Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
         with open(flagged_log, "rb") as f:
-            st.download_button("⬇️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+            st.download_button("⬇️ Flagged", f, file_name=f"flagged_{timestamp}.txt")
         with open(blocklist_file, "rb") as f:
             st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -208,4 +199,4 @@ if uploaded_file is not None:
         commit_blocklist_to_github()
         cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
 
-st.markdown('</div>', unsafe_allow_html=True)  # Close card
+st.markdown('</div>', unsafe_allow_html=True)  # close box
