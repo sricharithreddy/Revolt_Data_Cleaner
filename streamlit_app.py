@@ -107,7 +107,7 @@ st.markdown(
 # Logo + Subtitle (stacked, centered, no cropping)
 # ====================================================
 if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", width=180)  # auto scale, no crop
+    st.image("revolt_logo.png", width=140)  # auto scale, no crop
 else:
     st.write("⚠️ Add revolt_logo.png to repo root")
 
