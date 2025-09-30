@@ -48,7 +48,7 @@ def cleanup_old_files(keep_files):
 st.set_page_config(page_title="Revolt Dashboard", page_icon="⚡", layout="centered")
 
 # ====================================================
-# CSS Styling (Minimal)
+# CSS Styling
 # ====================================================
 st.markdown(
     """
@@ -67,7 +67,7 @@ st.markdown(
             background: linear-gradient(90deg, #b0000d, #e30613);
         }
 
-        /* Download buttons inline */
+        /* Downloads inline */
         .downloads { display: flex; justify-content: center; gap: 12px; margin-top: 15px; flex-wrap: wrap; }
     </style>
     """,
@@ -75,9 +75,12 @@ st.markdown(
 )
 
 # ====================================================
-# Logo
+# Logo (local file in repo)
 # ====================================================
-st.image("https://upload.wikimedia.org/wikipedia/commons/6/6e/Revolt_Motors_logo.png", width=130)
+if os.path.exists("revolt_logo.png"):
+    st.image("revolt_logo.png", width=150)
+else:
+    st.write("⚠️ Add revolt_logo.png to repo root")
 
 # ====================================================
 # Upload + Process
