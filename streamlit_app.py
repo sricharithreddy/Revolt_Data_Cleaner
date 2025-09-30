@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from Revoltv11 import process_file, load_blocklist
 import subprocess
+import glob
 
 # ====================================================
 # GitHub Auto-Commit for Blocklist
@@ -38,21 +39,31 @@ def commit_blocklist_to_github():
         st.warning(f"⚠️ Could not commit blocklist: {e}")
 
 # ====================================================
+# Auto-cleanup old files
+# ====================================================
+def cleanup_old_files(keep_files):
+    """Delete all uploaded/cleaned/log files except current ones."""
+    patterns = ["uploaded_*.xlsx", "cleaned_*.xlsx", "flagged_*.txt"]
+    for pattern in patterns:
+        for f in glob.glob(pattern):
+            if f not in keep_files:
+                try:
+                    os.remove(f)
+                except Exception:
+                    pass
+
+# ====================================================
 # Streamlit Page Config
 # ====================================================
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
-# Header with logo
-st.markdown(
-    """
-    <div style="display: flex; align-items: center; justify-content: center; padding: 10px 0;">
-        <img src="https://raw.githubusercontent.com/streamlit/brand/main/logos/mark/streamlit-mark-primary.png" 
-             alt="Revolt Logo" style="height:80px; margin-right: 15px;">
-        <h1 style="color:#e30613; margin:0;">Revolt Motors Data Cleaner</h1>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# Centered logo only
+st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+if os.path.exists("revolt_logo.png"):
+    st.image("revolt_logo.png", use_column_width=False, width=180)
+else:
+    st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ====================================================
 # File Upload
@@ -65,10 +76,13 @@ if uploaded_file is not None:
     input_path = f"uploaded_{timestamp}.xlsx"
     cleaned_output = f"cleaned_{timestamp}.xlsx"
     flagged_log = f"flagged_{timestamp}.txt"
+    blocklist_file = "seen_feedback_mobiles.csv"  # master file
 
+    # Save uploaded file locally
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
+    # Run processing
     st.info("⚡ Running cleaner, please wait...")
     result = process_file(input_path, cleaned_output, flagged_log)
 
@@ -79,6 +93,7 @@ if uploaded_file is not None:
     orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
     removed_rows = orig_rows - total_rows
 
+    # Process summary
     st.markdown("### 📊 Process Summary")
     st.success(
         f"""
@@ -96,7 +111,11 @@ if uploaded_file is not None:
     with open(flagged_log, "rb") as f:
         st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
 
-    with open("seen_feedback_mobiles.csv", "rb") as f:
+    with open(blocklist_file, "rb") as f:
         st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
 
+    # Commit blocklist back to GitHub
     commit_blocklist_to_github()
+
+    # Cleanup old temp files
+    cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
