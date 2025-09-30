@@ -14,7 +14,7 @@ from Revoltv11 import process_file
 # Page Config
 # =========================
 st.set_page_config(
-    page_title="Revolt Data Cleaner",
+    page_title="Revolt Motors",
     page_icon="⚡",
     layout="centered"
 )
@@ -118,7 +118,7 @@ h1, h2, h3 { font-weight: 700 !important; }
 header_html = (
     '<div style="display:flex; align-items:center; justify-content:center; margin-bottom:10px;">'
     + logo_html
-    + '<h1 style="color:#222; margin:0;">Revolt Motors Data Cleaner</h1>'
+    + '<h1 style="color:#222; margin:0;">Revolt Motors AI</h1>'
     + '</div>'
     + '<p style="text-align:center; color:#666; font-size:16px;">'
     + 'Upload raw Excel/CSV → get a <b>cleaned dataset</b>, <b>flagged log</b>, and an <b>updated blocklist</b>.'
