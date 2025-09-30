@@ -103,14 +103,19 @@ st.markdown(
 )
 
 # ====================================================
-# Logo + Subtitle (stacked, centered)
 # ====================================================
+# Logo + Subtitle (stacked, centered, no cropping)
+# ====================================================
+if os.path.exists("revolt_logo.png"):
+    st.image("revolt_logo.png", width=180)  # auto scale, no crop
+else:
+    st.write("⚠️ Add revolt_logo.png to repo root")
+
 st.markdown(
     """
-    <div style="text-align: center; margin-bottom: 25px;">
-        <img src="revolt_logo.png" alt="Revolt Logo" style="height: 70px; margin-bottom: 10px;">
-        <h3 style="margin: 0; font-weight: 600; color: #333;">Data Processor for AI</h3>
-    </div>
+    <h3 style="text-align: center; margin-top: 10px; font-weight: 600; color: #333;">
+        Data Processor for AI
+    </h3>
     """,
     unsafe_allow_html=True
 )
