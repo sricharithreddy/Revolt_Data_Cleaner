@@ -5,6 +5,14 @@ from datetime import datetime
 from Revoltv11 import process_file, load_blocklist
 import subprocess
 import glob
+import base64
+
+# ====================================================
+# Helper: Load logo as Base64 (to ensure it shows on Streamlit Cloud)
+# ====================================================
+def get_base64_image(image_path):
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 # ====================================================
 # GitHub Auto-Commit for Blocklist
@@ -17,20 +25,15 @@ def commit_blocklist_to_github():
 
         remote_url = f"https://{user}:{token}@github.com/{user}/{repo}.git"
 
-        # Configure git
         subprocess.run(["git", "config", "--global", "user.email", f"{user}@users.noreply.github.com"], check=True)
         subprocess.run(["git", "config", "--global", "user.name", user], check=True)
-
-        # Stage the file
         subprocess.run(["git", "add", "seen_feedback_mobiles.csv"], check=True)
 
-        # Check if changes exist
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
         if "seen_feedback_mobiles.csv" not in status.stdout:
             st.info("ℹ️ No changes in blocklist, skipping commit.")
             return
 
-        # Commit and push
         subprocess.run(["git", "commit", "-m", "Update blocklist [auto-commit]"], check=True)
         subprocess.run(["git", "push", remote_url, "main"], check=True)
 
@@ -42,7 +45,6 @@ def commit_blocklist_to_github():
 # Auto-cleanup old files
 # ====================================================
 def cleanup_old_files(keep_files):
-    """Delete all uploaded/cleaned/log files except current ones."""
     patterns = ["uploaded_*.xlsx", "cleaned_*.xlsx", "flagged_*.txt"]
     for pattern in patterns:
         for f in glob.glob(pattern):
@@ -57,17 +59,23 @@ def cleanup_old_files(keep_files):
 # ====================================================
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
-# Custom CSS (Center everything + CTA button styling)
+# ====================================================
+# Global Centering CSS
+# ====================================================
 st.markdown(
     """
     <style>
-        /* Center all main content */
-        .centered {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        /* Center all text and block elements */
+        .block-container {
             text-align: center;
+        }
+        div[data-testid="stFileUploader"] {
+            display: flex;
+            justify-content: center;
+        }
+        div.stDownloadButton {
+            display: inline-block;
+            margin: 0 10px;
         }
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
@@ -89,16 +97,14 @@ st.markdown(
 )
 
 # ====================================================
-# Centered Content Wrapper
+# Centered Logo
 # ====================================================
-st.markdown('<div class="centered">', unsafe_allow_html=True)
-
-# Logo
 if os.path.exists("revolt_logo.png"):
+    logo_base64 = get_base64_image("revolt_logo.png")
     st.markdown(
-        """
-        <div style="margin-bottom: 20px;">
-            <img src="revolt_logo.png" width="180">
+        f"""
+        <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <img src="data:image/png;base64,{logo_base64}" width="180">
         </div>
         """,
         unsafe_allow_html=True
@@ -117,25 +123,21 @@ if uploaded_file is not None:
     input_path = f"uploaded_{timestamp}.xlsx"
     cleaned_output = f"cleaned_{timestamp}.xlsx"
     flagged_log = f"flagged_{timestamp}.txt"
-    blocklist_file = "seen_feedback_mobiles.csv"  # master file
+    blocklist_file = "seen_feedback_mobiles.csv"
 
-    # Save uploaded file locally
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    # CTA button
-    if st.button("🚀 Run Cleaning", use_container_width=True):
+    if st.button("🚀 Run Cleaning"):
         st.info("⚡ Running cleaner, please wait...")
         result = process_file(input_path, cleaned_output, flagged_log)
 
-        # Load sizes
         cleaned_df = pd.ExcelFile(cleaned_output)
         total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
         orig_df = pd.ExcelFile(input_path)
         orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
         removed_rows = orig_rows - total_rows
 
-        # Process summary
         st.markdown("### 📊 Process Summary")
         st.success(
             f"""
@@ -146,21 +148,17 @@ if uploaded_file is not None:
             """
         )
 
-        # Download buttons with timestamped names
-        with open(cleaned_output, "rb") as f:
-            st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
+        # Buttons side by side
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            with open(cleaned_output, "rb") as f:
+                st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
+        with col2:
+            with open(flagged_log, "rb") as f:
+                st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+        with col3:
+            with open(blocklist_file, "rb") as f:
+                st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
 
-        with open(flagged_log, "rb") as f:
-            st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
-
-        with open(blocklist_file, "rb") as f:
-            st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
-
-        # Commit blocklist back to GitHub
         commit_blocklist_to_github()
-
-        # Cleanup old temp files
         cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
-
-# Close centered container
-st.markdown('</div>', unsafe_allow_html=True)
