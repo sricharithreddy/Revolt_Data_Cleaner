@@ -8,7 +8,7 @@ import glob
 import base64
 
 # ====================================================
-# Helper: Load logo as Base64 (works on Streamlit Cloud)
+# Helper: Load logo as Base64 (to ensure it works on Streamlit Cloud)
 # ====================================================
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -65,44 +65,49 @@ st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 st.markdown(
     """
     <style>
-        /* Center page content */
+        /* Page background */
+        .main {
+            background-color: #f7f9fb;
+        }
+        /* Center content */
         .block-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 10px;
+            padding-top: 20px;
+            max-width: 1000px;
         }
         /* Card styling */
         .card {
             background: #ffffff;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            max-width: 750px;
+            padding: 25px 35px;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+            max-width: 520px;
             width: 100%;
             text-align: center;
-            margin-top: 20px;
+            margin-top: 25px;
         }
         /* Section title */
         .card h3 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
-            margin-bottom: 15px;
-            color: #222;
+            margin-bottom: 18px;
+            color: #333;
         }
-        /* Upload box */
+        /* File uploader alignment */
         div[data-testid="stFileUploader"] {
             display: flex;
             justify-content: center;
         }
-        /* CTA button */
+        /* CTA Button */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white;
             border: none;
             border-radius: 8px;
             padding: 0.6em 1.2em;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             transition: 0.3s;
             margin-top: 20px;
@@ -116,17 +121,19 @@ st.markdown(
         .downloads {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
         .downloads div.stDownloadButton button {
             border-radius: 8px;
             padding: 0.5em 1em;
             font-size: 14px;
         }
-        /* Success / info boxes cleanup */
+        /* Alerts formatting */
         .stAlert {
             text-align: left;
+            border-radius: 8px;
         }
     </style>
     """,
@@ -134,20 +141,20 @@ st.markdown(
 )
 
 # ====================================================
-# Logo
+# Logo + Header
 # ====================================================
 if os.path.exists("revolt_logo.png"):
     logo_base64 = get_base64_image("revolt_logo.png")
     st.markdown(
         f"""
-        <div style="display:flex;justify-content:center;margin-bottom:15px;">
-            <img src="data:image/png;base64,{logo_base64}" width="240">
+        <div style="display:flex;justify-content:center;margin-bottom:10px;">
+            <img src="data:image/png;base64,{logo_base64}" width="220">
         </div>
         """,
         unsafe_allow_html=True
     )
-else:
-    st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
+
+st.markdown("<h2 style='text-align:center; color:#222;'>📊 Revolt Data Cleaner Dashboard</h2>", unsafe_allow_html=True)
 
 # ====================================================
 # Upload + Processing Card
