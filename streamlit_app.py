@@ -14,7 +14,9 @@ def commit_blocklist_to_github():
         repo = st.secrets["GITHUB_REPO"]
         remote_url = f"https://{user}:{token}@github.com/{user}/{repo}.git"
 
-        subprocess.run(["git", "config", "--global", "user.email", f"{user}@users.noreply.github.com"], check=True)
+        subprocess.run(
+            ["git", "config", "--global", "user.email", f"{user}@users.noreply.github.com"], check=True
+        )
         subprocess.run(["git", "config", "--global", "user.name", user], check=True)
         subprocess.run(["git", "add", "seen_feedback_mobiles.csv"], check=True)
 
@@ -54,12 +56,13 @@ st.set_page_config(
 # ====================================================
 # Branding (Logo + Subtitle centered)
 # ====================================================
-logo_col = st.columns([1, 2, 1])[1]   # center column
+logo_col = st.columns([1, 2, 1])[1]   # middle column
 with logo_col:
     if os.path.exists("revolt_logo.png"):
-        st.image("revolt_logo.png", use_column_width="auto")
+        st.image("revolt_logo.png", width=120)  # professional size
     else:
         st.warning("⚠️ Revolt logo not found. Please add revolt_logo.png")
+
     st.markdown(
         "<h3 style='text-align: center; color:#e30613; font-weight:700;'>Data Processor for AI</h3>",
         unsafe_allow_html=True
@@ -70,10 +73,14 @@ st.markdown("---")
 # ====================================================
 # File Upload Section
 # ====================================================
-upload_col = st.columns([1, 2, 1])[1]  # center align uploader
+upload_col = st.columns([1, 2, 1])[1]
 with upload_col:
     st.subheader("📂 Upload Your File")
-    uploaded_file = st.file_uploader("Upload Excel/CSV file", type=["xlsx", "xls", "csv"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader(
+        "Upload Excel/CSV file",
+        type=["xlsx", "xls", "csv"],
+        label_visibility="collapsed"
+    )
 
 # ====================================================
 # Processing Logic
@@ -88,7 +95,7 @@ if uploaded_file is not None:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    run_col = st.columns([1, 2, 1])[1]  # center align button
+    run_col = st.columns([1, 2, 1])[1]
     with run_col:
         if st.button("🚀 Run Processing", use_container_width=True, type="primary"):
             with st.spinner("⚡ Processing in progress..."):
@@ -123,15 +130,30 @@ if uploaded_file is not None:
 
                 with d1:
                     with open(cleaned_output, "rb") as f:
-                        st.download_button("📥 Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
+                        st.download_button(
+                            "📥 Cleaned File",
+                            f,
+                            file_name=f"cleaned_{timestamp}.xlsx",
+                            use_container_width=True
+                        )
 
                 with d2:
                     with open(flagged_log, "rb") as f:
-                        st.download_button("📥 Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
+                        st.download_button(
+                            "📥 Flagged Log",
+                            f,
+                            file_name=f"flagged_{timestamp}.txt",
+                            use_container_width=True
+                        )
 
                 with d3:
                     with open(blocklist_file, "rb") as f:
-                        st.download_button("📥 Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+                        st.download_button(
+                            "📥 Blocklist",
+                            f,
+                            file_name=f"blocklist_{timestamp}.csv",
+                            use_container_width=True
+                        )
 
                 st.markdown("---")
 
@@ -140,7 +162,9 @@ if uploaded_file is not None:
                 # ====================================================
                 with st.expander("📋 Preview Blocklist (last 20 numbers)"):
                     try:
-                        blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
+                        blocklist_df = pd.read_csv(
+                            blocklist_file, header=None, names=["Mobile Number"]
+                        )
                         st.dataframe(blocklist_df.tail(20), use_container_width=True)
                     except Exception:
                         st.info("No blocklist data available.")
