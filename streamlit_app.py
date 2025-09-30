@@ -8,7 +8,7 @@ import glob
 import base64
 
 # ====================================================
-# Helper: Load logo as Base64 (to ensure it shows on Streamlit Cloud)
+# Helper: Load logo as Base64 (works on Streamlit Cloud)
 # ====================================================
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -60,23 +60,42 @@ def cleanup_old_files(keep_files):
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
 # ====================================================
-# Global Centering CSS
+# Global CSS Styling (Dashboard look)
 # ====================================================
 st.markdown(
     """
     <style>
-        /* Center all text and block elements */
+        /* Center page content */
         .block-container {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
         }
+        /* Card styling */
+        .card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            max-width: 750px;
+            width: 100%;
+            text-align: center;
+            margin-top: 20px;
+        }
+        /* Section title */
+        .card h3 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #222;
+        }
+        /* Upload box */
         div[data-testid="stFileUploader"] {
             display: flex;
             justify-content: center;
         }
-        div.stDownloadButton {
-            display: inline-block;
-            margin: 0 10px;
-        }
+        /* CTA button */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white;
@@ -86,10 +105,28 @@ st.markdown(
             font-size: 16px;
             font-weight: 600;
             transition: 0.3s;
+            margin-top: 20px;
+            width: 100%;
         }
         div.stButton > button:first-child:hover {
             background: linear-gradient(90deg, #b0000d, #e30613);
             transform: scale(1.02);
+        }
+        /* Download buttons inline */
+        .downloads {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .downloads div.stDownloadButton button {
+            border-radius: 8px;
+            padding: 0.5em 1em;
+            font-size: 14px;
+        }
+        /* Success / info boxes cleanup */
+        .stAlert {
+            text-align: left;
         }
     </style>
     """,
@@ -97,14 +134,14 @@ st.markdown(
 )
 
 # ====================================================
-# Centered Logo
+# Logo
 # ====================================================
 if os.path.exists("revolt_logo.png"):
     logo_base64 = get_base64_image("revolt_logo.png")
     st.markdown(
         f"""
-        <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <img src="data:image/png;base64,{logo_base64}" width="180">
+        <div style="display:flex;justify-content:center;margin-bottom:15px;">
+            <img src="data:image/png;base64,{logo_base64}" width="240">
         </div>
         """,
         unsafe_allow_html=True
@@ -113,8 +150,10 @@ else:
     st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
-# File Upload
+# Upload + Processing Card
 # ====================================================
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
 st.markdown("### 📂 Upload Excel File")
 uploaded_file = st.file_uploader("Choose a file", type=["xlsx"])
 
@@ -141,24 +180,25 @@ if uploaded_file is not None:
         st.markdown("### 📊 Process Summary")
         st.success(
             f"""
-            ✅ Processed: {orig_rows} rows  
-            📤 Cleaned File: {total_rows} rows  
-            🚫 Removed (blocklisted): {removed_rows} rows  
-            📋 Blocklist: +{result['new_numbers']} new (now total {len(load_blocklist())})
+            ✅ **Processed:** {orig_rows} rows  
+            📤 **Cleaned File:** {total_rows} rows  
+            🚫 **Removed (blocklisted):** {removed_rows} rows  
+            📋 **Blocklist Update:** +{result['new_numbers']} new  
+            _(Now total: {len(load_blocklist())})_
             """
         )
 
-        # Buttons side by side
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            with open(cleaned_output, "rb") as f:
-                st.download_button("⬇️ Download Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
-        with col2:
-            with open(flagged_log, "rb") as f:
-                st.download_button("⬇️ Download Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
-        with col3:
-            with open(blocklist_file, "rb") as f:
-                st.download_button("⬇️ Download Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+        # Download buttons inline
+        st.markdown('<div class="downloads">', unsafe_allow_html=True)
+        with open(cleaned_output, "rb") as f:
+            st.download_button("⬇️ Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx")
+        with open(flagged_log, "rb") as f:
+            st.download_button("⬇️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+        with open(blocklist_file, "rb") as f:
+            st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         commit_blocklist_to_github()
         cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
+
+st.markdown('</div>', unsafe_allow_html=True)  # Close card
