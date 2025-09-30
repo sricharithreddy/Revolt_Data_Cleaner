@@ -45,32 +45,18 @@ def cleanup_old_files(keep_files):
 # ====================================================
 # Page Setup
 # ====================================================
-st.set_page_config(page_title="Revolt Dashboard", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Revolt Dashboard", page_icon="⚡", layout="centered")
 
 # ====================================================
-# CSS Styling
+# CSS Styling (Minimal)
 # ====================================================
 st.markdown(
     """
     <style>
         .main { background-color: #f5f6f8; }
-        .block-container { display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
+        .block-container { max-width: 600px; margin: auto; }
 
-        /* Card */
-        .card {
-            background: #fff;
-            padding: 25px 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            max-width: 480px;
-            width: 100%;
-            text-align: center;
-        }
-
-        /* File uploader width */
-        div[data-testid="stFileUploader"] { max-width: 360px; margin: 0 auto; }
-
-        /* Run Button */
+        /* Buttons */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #e30613, #b0000d);
             color: white; border: none; border-radius: 8px;
@@ -81,15 +67,8 @@ st.markdown(
             background: linear-gradient(90deg, #b0000d, #e30613);
         }
 
-        /* Downloads inline */
+        /* Download buttons inline */
         .downloads { display: flex; justify-content: center; gap: 12px; margin-top: 15px; flex-wrap: wrap; }
-        .downloads div.stDownloadButton button {
-            border-radius: 8px; padding: 0.5em 1em; font-size: 14px;
-            border: 1px solid #ccc; background: #fafafa; color: #333;
-        }
-        .downloads div.stDownloadButton button:hover {
-            border: 1px solid #e30613; color: #e30613; background: #fff;
-        }
     </style>
     """,
     unsafe_allow_html=True
@@ -98,20 +77,11 @@ st.markdown(
 # ====================================================
 # Logo
 # ====================================================
-st.markdown(
-    """
-    <div style="display:flex;justify-content:center;margin-bottom:15px;">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Revolt_Motors_logo.png" width="130">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.image("https://upload.wikimedia.org/wikipedia/commons/6/6e/Revolt_Motors_logo.png", width=130)
 
 # ====================================================
-# Upload + Process Card
+# Upload + Process
 # ====================================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-
 uploaded_file = st.file_uploader("Upload Excel/CSV", type=["xlsx", "xls", "csv"])
 
 if uploaded_file is not None:
@@ -150,13 +120,10 @@ if uploaded_file is not None:
             with open(cleaned_output, "rb") as f:
                 st.download_button("⬇️ Cleaned", f, file_name=f"cleaned_{timestamp}.xlsx")
             with open(flagged_log, "rb") as f:
-                st.download_button("⬇️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt")
+                st.download_button("⬇️ Flagged", f, file_name=f"flagged_{timestamp}.txt")
             with open(blocklist_file, "rb") as f:
                 st.download_button("⬇️ Blocklist", f, file_name=f"blocklist_{timestamp}.csv")
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Commit & cleanup
             commit_blocklist_to_github()
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
-
-st.markdown('</div>', unsafe_allow_html=True)
