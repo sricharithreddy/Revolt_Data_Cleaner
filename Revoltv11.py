@@ -141,10 +141,17 @@ def process_file(input_file: str, cleaned_output: str, flagged_log: str):
                     debug_lines.append(f"TR_Completed sheet → new entries: {len(new_entries)}")
                     blocklist = pd.concat([blocklist, pd.DataFrame(new_entries)], ignore_index=True)
 
+                # ✅ Block calls numbers immediately + TR_Completed numbers only if added before today
+                calls_numbers = blocklist.loc[
+                    (blocklist["DateAdded"] == today), "Mobile Number"
+                ].tolist()
+                old_numbers = blocklist.loc[
+                    (blocklist["DateAdded"] < today), "Mobile Number"
+                ].tolist()
+
+                to_block = set(calls_numbers) | set(old_numbers)
                 before = len(df)
-                df = df[~df["Mobile Number"].isin(
-                    blocklist.loc[blocklist["DateAdded"] < today, "Mobile Number"]
-                )]
+                df = df[~df["Mobile Number"].isin(to_block)]
                 debug_lines.append(f"TR_Completed sheet → removed {before - len(df)} rows")
 
         # Save cleaned sheet
