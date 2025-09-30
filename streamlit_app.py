@@ -58,12 +58,12 @@ def cleanup_old_files(keep_files):
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
 # Centered logo only
-st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-if os.path.exists("revolt_logo.png"):
-    st.image("revolt_logo.png", use_column_width=False, width=180)
-else:
-    st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
-st.markdown("</div>", unsafe_allow_html=True)
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if os.path.exists("revolt_logo.png"):
+        st.image("revolt_logo.png", use_container_width=True)
+    else:
+        st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
 # File Upload
