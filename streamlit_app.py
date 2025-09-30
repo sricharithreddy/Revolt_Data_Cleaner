@@ -198,6 +198,6 @@ if uploaded_file is not None:
 # Footer
 # ====================================================
 st.markdown(
-    "<hr><p style='text-align:center; color:gray; font-size:14px;'>⚡ Powered by Orbitel ⚡</p>",
+    "<hr><p style='text-align:center; color:gray; font-size:16px;'>⚡ Powered by Orbitel ⚡</p>",
     unsafe_allow_html=True
 )
