@@ -57,35 +57,13 @@ def cleanup_old_files(keep_files):
 # ====================================================
 st.set_page_config(page_title="Revolt Data Cleaner", layout="wide")
 
-# Professional compact header (logo + title)
-st.markdown(
-    """
-    <style>
-        .header {
-            display: flex;
-            align-items: center;
-            padding: 10px 20px;
-            border-bottom: 1px solid #eee;
-            background-color: #fafafa;
-        }
-        .header img {
-            height: 40px;
-            margin-right: 15px;
-        }
-        .header h2 {
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            color: #333;
-            margin: 0;
-        }
-    </style>
-    <div class="header">
-        <img src="revolt_logo.png">
-        <h2>Revolt Data Cleaner</h2>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Centered logo header
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if os.path.exists("revolt_logo.png"):
+        st.image("revolt_logo.png", width=180)  # Professional fixed width
+    else:
+        st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
 # File Upload
