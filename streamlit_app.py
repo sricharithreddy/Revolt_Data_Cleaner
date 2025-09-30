@@ -3,6 +3,7 @@ import os
 import tempfile
 import pandas as pd
 from datetime import datetime
+import base64
 from Revoltv11 import process_file
 
 # ------------------------
@@ -15,18 +16,31 @@ st.set_page_config(
 )
 
 # ------------------------
+# Helper: Encode logo as base64
+# ------------------------
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        return base64.b64encode(f.read()).decode()
+
+LOGO_PATH = "revolt_logo.png"
+logo_html = ""
+if os.path.exists(LOGO_PATH):
+    logo_base64 = get_base64_of_bin_file(LOGO_PATH)
+    logo_html = f'<img src="data:image/png;base64,{logo_base64}" width="120" style="margin-right:15px;">'
+
+# ------------------------
 # Custom CSS Styling
 # ------------------------
 st.markdown("""
     <style>
-    /* Global font and background */
+    /* Global font */
     html, body, [class*="css"]  {
         font-family: 'Inter', sans-serif;
     }
     h1, h2, h3 {
         font-weight: 700 !important;
     }
-    /* Upload and button tweaks */
+    /* Run button */
     .stButton>button {
         background: linear-gradient(90deg, #e30613, #b0000d);
         color: white;
@@ -69,14 +83,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------------
-# Header with Logo
+# Header with Logo + Title
 # ------------------------
-LOGO_PATH = "revolt_logo.png"  # Place logo file in repo
-
-logo_html = ""
-if os.path.exists(LOGO_PATH):
-    logo_html = f'<img src="{LOGO_PATH}" width="120" style="margin-right:15px;">'
-
 st.markdown(
     f"""
     <div style="display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
