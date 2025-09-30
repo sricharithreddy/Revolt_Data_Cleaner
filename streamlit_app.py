@@ -80,15 +80,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# ====================================================
 # Properly Centered Logo
-st.markdown(
-    """
-    <div style="text-align:center; padding: 20px 0;">
-        <img src="revolt_logo.png" style="width:150px;">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# ====================================================
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if os.path.exists("revolt_logo.png"):
+        st.image("revolt_logo.png", width=180)
+    else:
+        st.warning("⚠️ Revolt logo not found in repo. Please add revolt_logo.png")
 
 # ====================================================
 # File Upload
