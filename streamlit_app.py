@@ -118,3 +118,54 @@ if uploaded_file:
         blocklist_size = sum(1 for _ in open("seen_feedback_mobiles.csv", encoding="utf-8")) - 1
 
         # ------------------------
+        # Process Summary Panel
+        # ------------------------
+        st.markdown(
+            f"""
+            <div class="summary-card">
+                <h3 style="margin-top:0; color:#e30613;">📊 Process Summary</h3>
+                <p>✅ <b>Processed:</b> {orig_rows:,} rows</p>
+                <p>📤 <b>Cleaned File:</b> {total_rows:,} rows</p>
+                <p>🚫 <b>Removed (blocklisted):</b> {removed_rows:,} rows</p>
+                <p>📋 <b>Blocklist:</b> +{new_count:,} new (now total {blocklist_size:,})</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ------------------------
+        # Downloads Section
+        # ------------------------
+        st.markdown("<h3 style='margin-top:30px;'>📥 Downloads</h3>", unsafe_allow_html=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if os.path.exists(cleaned_output):
+            with open(cleaned_output, "rb") as f:
+                st.download_button(
+                    "⬇️ Download Cleaned File",
+                    f,
+                    file_name=f"cleaned_output_{timestamp}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+
+        if os.path.exists(flagged_log):
+            with open(flagged_log, "rb") as f:
+                st.download_button(
+                    "⬇️ Download Flagged Log",
+                    f,
+                    file_name=f"flagged_log_{timestamp}.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
+
+        if os.path.exists("seen_feedback_mobiles.csv"):
+            with open("seen_feedback_mobiles.csv", "rb") as f:
+                st.download_button(
+                    "⬇️ Download Blocklist",
+                    f,
+                    file_name=f"seen_feedback_mobiles_{timestamp}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
