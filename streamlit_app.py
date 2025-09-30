@@ -59,20 +59,27 @@ st.set_page_config(
 logo_col = st.columns([1, 2, 1])[1]
 with logo_col:
     if os.path.exists("revolt_logo.png"):
-        st.image("revolt_logo.png", width=120)
+        st.image("revolt_logo.png", width=140)
     else:
         st.warning("⚠️ Revolt logo not found. Please add revolt_logo.png")
 
-    st.markdown("### ⚡ Data Processor for AI ⚡")
+    st.markdown(
+        "<h3 style='text-align:center; color:#e30613; font-weight:700;'>Data Processor for AI</h3>",
+        unsafe_allow_html=True
+    )
 
-st.divider()
+st.markdown("---")
 
 # ====================================================
 # File Upload Section
 # ====================================================
 with st.container(border=True):
-    st.subheader("📂 Upload Your File")
-    uploaded_file = st.file_uploader("Upload Excel/CSV", type=["xlsx", "xls", "csv"], label_visibility="collapsed")
+    if os.path.exists("icon_upload.png"):
+        st.image("icon_upload.png", width=40)
+    st.subheader("Upload Your File")
+    uploaded_file = st.file_uploader(
+        "Upload Excel/CSV", type=["xlsx", "xls", "csv"], label_visibility="collapsed"
+    )
 
 # ====================================================
 # Processing Logic
@@ -95,7 +102,9 @@ if uploaded_file is not None:
             # Process Summary
             # ====================================================
             with st.container(border=True):
-                st.subheader("📊 Process Summary")
+                if os.path.exists("icon_summary.png"):
+                    st.image("icon_summary.png", width=40)
+                st.subheader("Process Summary")
 
                 cleaned_df = pd.ExcelFile(cleaned_output)
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
@@ -115,7 +124,9 @@ if uploaded_file is not None:
             # Downloads Section
             # ====================================================
             with st.container(border=True):
-                st.subheader("⬇️ Downloads")
+                if os.path.exists("icon_downloads.png"):
+                    st.image("icon_downloads.png", width=40)
+                st.subheader("Downloads")
 
                 d1, d2, d3 = st.columns(3)
 
@@ -135,7 +146,9 @@ if uploaded_file is not None:
             # Blocklist Preview
             # ====================================================
             with st.container(border=True):
-                with st.expander("📋 Preview Blocklist (last 20 numbers)"):
+                if os.path.exists("icon_blocklist.png"):
+                    st.image("icon_blocklist.png", width=40)
+                with st.expander("Preview Blocklist (last 20 numbers)"):
                     try:
                         blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
                         st.dataframe(blocklist_df.tail(20), use_container_width=True)
