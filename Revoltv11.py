@@ -26,6 +26,31 @@ def add_ordinal_suffix(day: int) -> str:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return f"{day}{suffix}"
 
+def looks_like_date(val):
+    """Check if a value looks like a date."""
+    try:
+        dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
+        return pd.notna(dt)
+    except Exception:
+        return False
+
+def format_date_column(df, col):
+    """Format detected date columns into '1st October' style strings."""
+    formatted = []
+    for val in df[col]:
+        try:
+            dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
+            if pd.notna(dt):
+                day = add_ordinal_suffix(dt.day)
+                month = dt.strftime("%B")
+                formatted.append(f"{day} {month}")
+            else:
+                formatted.append(str(val))
+        except Exception:
+            formatted.append(str(val))
+    df[col] = formatted
+    return df
+
 def is_sensible_name(name: str, original_name: str, row_index: Optional[int], logs: List[Dict]) -> bool:
     if not name or not isinstance(name, str):
         logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "empty_or_invalid_input"})
@@ -113,26 +138,6 @@ def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Di
     return cleaned
 
 # ====================================================
-# Date Formatter
-# ====================================================
-def format_date_column(df, col):
-    """Format date columns into '1st October' style."""
-    formatted = []
-    for val in df[col]:
-        try:
-            dt = pd.to_datetime(val, errors="coerce")
-            if pd.notna(dt):
-                day = add_ordinal_suffix(dt.day)
-                month = dt.strftime("%B")
-                formatted.append(f"{day} {month}")
-            else:
-                formatted.append(val)
-        except Exception:
-            formatted.append(val)
-    df[col] = formatted
-    return df
-
-# ====================================================
 # Blocklist Support
 # ====================================================
 def load_blocklist(file_path="seen_feedback_mobiles.csv"):
@@ -193,8 +198,13 @@ def process_file(
             name_col = name_candidates[0]
             df[name_col] = [clean_customer_name(raw, idx, logs) for idx, raw in df[name_col].items()]
 
-        # Date formatting
+        # Date formatting — detect by name + sample values
         date_candidates = [col for col in df.columns if "date" in col.lower()]
+        for col in df.columns:
+            sample_vals = df[col].dropna().astype(str).head(10)
+            if any(looks_like_date(v) for v in sample_vals):
+                if col not in date_candidates:
+                    date_candidates.append(col)
         for dcol in date_candidates:
             df = format_date_column(df, dcol)
 
