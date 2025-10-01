@@ -15,11 +15,21 @@ def split_camel_case(name: str) -> str:
         return " ".join(parts.split())
     return name
 
+def add_ordinal_suffix(day: int) -> str:
+    try:
+        day = int(day)
+    except Exception:
+        return ""
+    if 10 <= day % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return f"{day}{suffix}"
+
 def is_sensible_name(name: str, original_name: str, row_index: Optional[int], logs: List[Dict]) -> bool:
     if not name or not isinstance(name, str):
         logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "empty_or_invalid_input"})
         return False
-
     lower_name = name.lower().strip()
     blacklist = [
         "joker","k","ccc","aaa","busy","king","spam","failureboys",
@@ -34,7 +44,6 @@ def is_sensible_name(name: str, original_name: str, row_index: Optional[int], lo
         if lower_name == word:
             logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": f"blacklist_match:{word}"})
             return False
-
     if len(lower_name) < 2:
         logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "too_short"})
         return False
@@ -83,7 +92,6 @@ def clean_customer_name(name: str, row_index: Optional[int], logs: List[Dict]) -
     if not is_sensible_name(cleaned, original_name, row_index, logs):
         return ""
 
-    # ✅ count as name cleaned if changed
     if cleaned != original_name:
         logs.append({"index": row_index, "original": original_name, "cleaned": cleaned, "reason": "name_cleaned"})
 
@@ -105,6 +113,26 @@ def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Di
     return cleaned
 
 # ====================================================
+# Date Formatter
+# ====================================================
+def format_date_column(df, col):
+    """Format date columns into '1st October' style."""
+    formatted = []
+    for val in df[col]:
+        try:
+            dt = pd.to_datetime(val, errors="coerce")
+            if pd.notna(dt):
+                day = add_ordinal_suffix(dt.day)
+                month = dt.strftime("%B")
+                formatted.append(f"{day} {month}")
+            else:
+                formatted.append(val)
+        except Exception:
+            formatted.append(val)
+    df[col] = formatted
+    return df
+
+# ====================================================
 # Blocklist Support
 # ====================================================
 def load_blocklist(file_path="seen_feedback_mobiles.csv"):
@@ -112,7 +140,7 @@ def load_blocklist(file_path="seen_feedback_mobiles.csv"):
         df = pd.read_csv(file_path, dtype=str, header=None)
     except Exception:
         return pd.DataFrame(columns=["Mobile","DateAdded"])
-    if df.shape[1] == 1:  # old format
+    if df.shape[1] == 1:
         df.columns = ["Mobile"]
         df["DateAdded"] = datetime.today().strftime("%Y-%m-%d")
         df.to_csv(file_path, index=False)
@@ -165,6 +193,11 @@ def process_file(
             name_col = name_candidates[0]
             df[name_col] = [clean_customer_name(raw, idx, logs) for idx, raw in df[name_col].items()]
 
+        # Date formatting
+        date_candidates = [col for col in df.columns if "date" in col.lower()]
+        for dcol in date_candidates:
+            df = format_date_column(df, dcol)
+
         # Blocklist filtering
         if apply_blocklist and mobile_col:
             blocklist_df = load_blocklist(blocklist_file)
@@ -176,14 +209,8 @@ def process_file(
             blocklist = blocklist_df["Mobile"].astype(str).tolist()
             flagged = df[df[mobile_col].astype(str).isin(blocklist)]
 
-            # Record blocklist matches
             for idx, row in flagged.iterrows():
-                logs.append({
-                    "index": idx,
-                    "original": row[mobile_col],
-                    "cleaned": "",
-                    "reason": "blocklist_match"
-                })
+                logs.append({"index": idx, "original": row[mobile_col], "cleaned": "", "reason": "blocklist_match"})
 
             flagged[mobile_col].to_csv(flagged_log_path, index=False, header=False)
 
@@ -214,7 +241,7 @@ def process_file(
             reason = entry.get("reason","")
             f.write(f"{idx},{orig},{cleaned},{reason}\n")
 
-    # ===== New summary counts =====
+    # Summary counts
     name_fixes = sum(1 for log in logs if log.get("reason") == "name_cleaned")
     mobile_fixes = sum(1 for log in logs if log.get("reason") == "mobile_cleaned")
     invalid_cases = sum(1 for log in logs if log.get("reason") in (
