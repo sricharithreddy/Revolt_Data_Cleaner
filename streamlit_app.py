@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os, glob, subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from Revoltv11 import process_file, load_blocklist
 
 # ====================================================
@@ -59,7 +59,6 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Modern CTA button */
     div.stButton > button:first-child {
         background-color: #e30613;
         color: white;
@@ -79,7 +78,7 @@ st.markdown(
 )
 
 # ====================================================
-# Branding (Logo + Subtitle centered)
+# Branding
 # ====================================================
 logo_col = st.columns([1, 2, 1])[1]
 with logo_col:
@@ -104,6 +103,21 @@ with st.container(border=True):
         "Upload Excel/CSV", type=["xlsx", "xls", "csv"], label_visibility="collapsed"
     )
 
+    # Optional Blocklist Toggle
+    use_blocklist = st.checkbox(
+        "Apply Blocklist Filtering", 
+        value=True, 
+        help="Uncheck to skip blocklist filtering"
+    )
+
+    cutoff_date = None
+    if use_blocklist:
+        cutoff_date = st.date_input(
+            "Apply blocklist entries till (inclusive)",
+            datetime.today() - timedelta(days=1),   # default yesterday
+            help="Only blocklist numbers added on or before this date"
+        )
+
 # ====================================================
 # Processing Logic
 # ====================================================
@@ -119,7 +133,13 @@ if uploaded_file is not None:
 
     if st.button("🚀 Run Processing", use_container_width=True):
         with st.spinner("⚡ Processing in progress... Please wait..."):
-            result = process_file(input_path, cleaned_output, flagged_log)
+            result = process_file(
+                input_path,
+                cleaned_output,
+                flagged_log,
+                apply_blocklist=use_blocklist,
+                cutoff_date=cutoff_date
+            )
 
             # ====================================================
             # Process Summary
@@ -131,15 +151,16 @@ if uploaded_file is not None:
                 total_rows = sum(len(cleaned_df.parse(s)) for s in cleaned_df.sheet_names)
                 orig_df = pd.ExcelFile(input_path)
                 orig_rows = sum(len(orig_df.parse(s)) for s in orig_df.sheet_names)
-                removed_rows = orig_rows - total_rows
+                removed_rows = orig_rows - total_rows if use_blocklist else 0
 
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("✅ Processed", orig_rows)
-                m2.metric("🧹 Cleaned", total_rows, delta=total_rows - orig_rows)
-                m3.metric("⛔ Removed", removed_rows, delta=-removed_rows if removed_rows > 0 else None)
-                m4.metric("📋 New Blocklist", result["new_numbers"], delta=result["new_numbers"])
+                m2.metric("🧹 Cleaned", total_rows)
+                m3.metric("⛔ Removed", removed_rows if use_blocklist else "N/A")
+                m4.metric("📋 New Blocklist", result["new_numbers"] if use_blocklist else "N/A")
 
-                st.caption(f"📋 Total Blocklist Size: {len(load_blocklist())}")
+                if use_blocklist:
+                    st.caption(f"📋 Total Blocklist Size: {len(load_blocklist())}")
 
             # ====================================================
             # Downloads Section
@@ -151,53 +172,30 @@ if uploaded_file is not None:
 
                 with d1:
                     with open(cleaned_output, "rb") as f:
-                        st.download_button(
-                            "✅ Cleaned File",
-                            f,
-                            file_name=f"cleaned_{timestamp}.xlsx",
-                            use_container_width=True
-                        )
+                        st.download_button("✅ Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
 
                 with d2:
                     with open(flagged_log, "rb") as f:
-                        st.download_button(
-                            "⚠️ Flagged Log",
-                            f,
-                            file_name=f"flagged_{timestamp}.txt",
-                            use_container_width=True
-                        )
+                        st.download_button("⚠️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
 
-                with d3:
-                    with open(blocklist_file, "rb") as f:
-                        st.download_button(
-                            "⛔ Blocklist",
-                            f,
-                            file_name=f"blocklist_{timestamp}.csv",
-                            use_container_width=True
-                        )
-
-            # ====================================================
-            # Blocklist Preview
-            # ====================================================
-            with st.container(border=True):
-                with st.expander("📋 Preview Blocklist (last 20 numbers)", expanded=False):
-                    try:
-                        blocklist_df = pd.read_csv(blocklist_file, header=None, names=["Mobile Number"])
-                        st.dataframe(blocklist_df.tail(20), use_container_width=True)
-                    except Exception:
-                        st.info("No blocklist data available.")
+                if use_blocklist:
+                    with d3:
+                        with open(blocklist_file, "rb") as f:
+                            st.download_button("⛔ Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
 
             # ====================================================
             # GitHub Commit + Cleanup
             # ====================================================
-            with st.spinner("🔄 Syncing blocklist to GitHub..."):
-                commit_blocklist_to_github()
+            if use_blocklist:
+                with st.spinner("🔄 Syncing blocklist to GitHub..."):
+                    commit_blocklist_to_github()
+
             cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
 
 # ====================================================
 # Footer
 # ====================================================
 st.markdown(
-    "<hr><p style='text-align:center; color:gray; font-size:16px;'>⚡ Powered by Orbitel ⚡</p>",
+    "<hr><p style='text-align:center; color:gray; font-size:12px;'>⚡ Powered by Revolt Data Engine ⚡</p>",
     unsafe_allow_html=True
 )
