@@ -24,7 +24,7 @@ def commit_blocklist_to_github():
 
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
         if "seen_feedback_mobiles.csv" not in status.stdout:
-            st.info("ℹ️ No changes in blocklist, skipping commit.")
+            st.info("ℹ️ No changes in blocklist file detected, skipping GitHub commit.")
             return
 
         subprocess.run(["git", "commit", "-m", "Update blocklist [auto-commit]"], check=True)
@@ -58,7 +58,7 @@ st.set_page_config(page_title="Revolt Data Processor", layout="wide")
 col1, col2, col3 = st.columns([1,2,1])
 with col2:
     if os.path.exists("revolt_logo.png"):
-        st.image("revolt_logo.png", width=180)
+        st.image("revolt_logo.png", width=160)
     st.markdown("<h3 style='text-align: center; color: #e30613;'>Data Processor for AI</h3>", unsafe_allow_html=True)
 
 st.divider()
@@ -148,7 +148,10 @@ if uploaded_file is not None:
         # Commit blocklist back to GitHub
         # ====================================================
         if use_blocklist:
-            commit_blocklist_to_github()
+            if result["new_numbers"] > 0:
+                commit_blocklist_to_github()
+            else:
+                st.info("ℹ️ No new blocklist entries to commit, skipping GitHub push.")
 
         # ====================================================
         # Cleanup temp files
