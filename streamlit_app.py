@@ -48,6 +48,13 @@ def cleanup_old_files(keep_files):
                     pass
 
 # ====================================================
+# Date Helper for Filenames
+# ====================================================
+def format_today_for_filename():
+    today = datetime.today()
+    return today.strftime("%d %b").lstrip("0")   # e.g. "1 Oct"
+
+# ====================================================
 # Page Config
 # ====================================================
 st.set_page_config(page_title="Revolt Data Processor", layout="wide")
@@ -132,17 +139,19 @@ if uploaded_file is not None:
             st.subheader("⬇️ Downloads")
             d1, d2, d3 = st.columns(3)
 
+            pretty_date = format_today_for_filename()
+
             with d1:
                 with open(cleaned_output, "rb") as f:
-                    st.download_button("✅ Cleaned File", f, file_name=f"cleaned_{timestamp}.xlsx", use_container_width=True)
+                    st.download_button("✅ Cleaned File", f, file_name=f"cleaned {pretty_date}.xlsx", use_container_width=True)
 
             with d2:
                 with open(flagged_log, "rb") as f:
-                    st.download_button("⚠️ Flagged Log", f, file_name=f"flagged_{timestamp}.txt", use_container_width=True)
+                    st.download_button("⚠️ Flagged Log", f, file_name=f"flagged {pretty_date}.txt", use_container_width=True)
 
             with d3:
                 with open(blocklist_file, "rb") as f:
-                    st.download_button("⛔ Blocklist", f, file_name=f"blocklist_{timestamp}.csv", use_container_width=True)
+                    st.download_button("⛔ Blocklist", f, file_name=f"blocklist {pretty_date}.csv", use_container_width=True)
 
         # ====================================================
         # Commit blocklist back to GitHub
