@@ -15,17 +15,6 @@ def split_camel_case(name: str) -> str:
         return " ".join(parts.split())
     return name
 
-def add_ordinal_suffix(day: int) -> str:
-    try:
-        day = int(day)
-    except Exception:
-        return ""
-    if 10 <= day % 100 <= 20:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return f"{day}{suffix}"
-
 def looks_like_date(val):
     """Check if a value looks like a date."""
     try:
@@ -35,15 +24,13 @@ def looks_like_date(val):
         return False
 
 def format_date_column(df, col):
-    """Format detected date columns into '1st October' style strings."""
+    """Format detected date columns into '1 Oct' style strings."""
     formatted = []
     for val in df[col]:
         try:
             dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
             if pd.notna(dt):
-                day = add_ordinal_suffix(dt.day)
-                month = dt.strftime("%B")
-                formatted.append(f"{day} {month}")
+                formatted.append(dt.strftime("%d %b").lstrip("0"))  # 01 Oct -> 1 Oct
             else:
                 formatted.append(str(val))
         except Exception:
