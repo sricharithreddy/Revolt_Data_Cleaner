@@ -30,7 +30,8 @@ def format_date_column(df, col):
         try:
             dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
             if pd.notna(dt):
-                formatted.append(dt.strftime("%d %b").lstrip("0"))  # 01 Oct -> 1 Oct
+formatted.append(dt.strftime("%-d %B") if os.name != "nt" else dt.strftime("%#d %B"))
+
             else:
                 formatted.append(str(val))
         except Exception:
