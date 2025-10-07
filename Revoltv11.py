@@ -15,6 +15,7 @@ def split_camel_case(name: str) -> str:
         return " ".join(parts.split())
     return name
 
+
 def looks_like_date(val):
     """Check if a value looks like a date."""
     try:
@@ -23,21 +24,26 @@ def looks_like_date(val):
     except Exception:
         return False
 
+
 def format_date_column(df, col):
-    """Format detected date columns into '1 Oct' style strings."""
+    """Format detected date columns into '7 October' style strings."""
     formatted = []
     for val in df[col]:
         try:
             dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
             if pd.notna(dt):
-formatted.append(dt.strftime("%-d %B") if os.name != "nt" else dt.strftime("%#d %B"))
-
+                # Use OS-safe day formatting (no leading zeros)
+                if os.name == "nt":
+                    formatted.append(dt.strftime("%#d %B"))  # Windows
+                else:
+                    formatted.append(dt.strftime("%-d %B"))  # Linux/Mac
             else:
                 formatted.append(str(val))
         except Exception:
             formatted.append(str(val))
     df[col] = formatted
     return df
+
 
 def is_sensible_name(name: str, original_name: str, row_index: Optional[int], logs: List[Dict]) -> bool:
     if not name or not isinstance(name, str):
@@ -67,6 +73,7 @@ def is_sensible_name(name: str, original_name: str, row_index: Optional[int], lo
         logs.append({"index": row_index, "original": original_name, "cleaned": name, "reason": "no_vowels"})
         return False
     return True
+
 
 def clean_customer_name(name: str, row_index: Optional[int], logs: List[Dict]) -> str:
     original_name = name
@@ -110,6 +117,7 @@ def clean_customer_name(name: str, row_index: Optional[int], logs: List[Dict]) -
 
     return cleaned
 
+
 def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Dict]) -> str:
     if pd.isna(raw_mobile):
         logs.append({"index": row_index, "original": raw_mobile, "cleaned_mobile": "", "reason": "mobile_is_na"})
@@ -124,6 +132,7 @@ def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Di
     if cleaned != str(raw_mobile):
         logs.append({"index": row_index, "original": raw_mobile, "cleaned_mobile": cleaned, "reason": "mobile_cleaned"})
     return cleaned
+
 
 # ====================================================
 # Blocklist Support
@@ -140,6 +149,7 @@ def load_blocklist(file_path="seen_feedback_mobiles.csv"):
     else:
         df.columns = ["Mobile","DateAdded"]
     return df
+
 
 # ====================================================
 # Main Processing Function
