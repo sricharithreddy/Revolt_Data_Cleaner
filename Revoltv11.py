@@ -168,6 +168,9 @@ def process_file(
     blocklist_file = "seen_feedback_mobiles.csv"
 
     for sheet_name, df in all_sheets.items():
+        # ✅ Rename 'opportunityid' to 'opportunity_id' if present
+        df.rename(columns=lambda x: "opportunity_id" if x.strip().lower() == "opportunityid" else x, inplace=True)
+
         # Mobile cleanup
         mobile_candidates = [col for col in df.columns if col.lower().replace(' ','') in (
             'mobilenumber','mobile','mobile_no','mobileno','contactnumber'
