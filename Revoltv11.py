@@ -32,7 +32,6 @@ def format_date_column(df, col):
         try:
             dt = pd.to_datetime(val, errors="coerce", dayfirst=True)
             if pd.notna(dt):
-                # Use OS-safe day formatting (no leading zeros)
                 if os.name == "nt":
                     formatted.append(dt.strftime("%#d %B"))  # Windows
                 else:
@@ -135,19 +134,24 @@ def clean_mobile_number(raw_mobile: str, row_index: Optional[int], logs: List[Di
 
 
 # ====================================================
-# Blocklist Support
+# Blocklist Support (with deduplication)
 # ====================================================
 def load_blocklist(file_path="seen_feedback_mobiles.csv"):
     try:
         df = pd.read_csv(file_path, dtype=str, header=None)
     except Exception:
-        return pd.DataFrame(columns=["Mobile","DateAdded"])
+        return pd.DataFrame(columns=["Mobile", "DateAdded"])
+    
     if df.shape[1] == 1:
         df.columns = ["Mobile"]
         df["DateAdded"] = datetime.today().strftime("%Y-%m-%d")
         df.to_csv(file_path, index=False)
     else:
-        df.columns = ["Mobile","DateAdded"]
+        df.columns = ["Mobile", "DateAdded"]
+
+    # ✅ Deduplicate blocklist each time it’s loaded
+    df.drop_duplicates(subset=["Mobile"], keep="first", inplace=True)
+    df.to_csv(file_path, index=False)
     return df
 
 
@@ -167,7 +171,7 @@ def process_file(
     logs: List[Dict] = []
 
     # Read input
-    if input_file_path.lower().endswith(('.xlsx','.xls')):
+    if input_file_path.lower().endswith(('.xlsx', '.xls')):
         all_sheets = pd.read_excel(input_file_path, sheet_name=None)
     elif input_file_path.lower().endswith('.csv'):
         all_sheets = {"Sheet1": pd.read_csv(input_file_path)}
@@ -183,8 +187,8 @@ def process_file(
         df.rename(columns=lambda x: "opportunity_id" if x.strip().lower() == "opportunityid" else x, inplace=True)
 
         # Mobile cleanup
-        mobile_candidates = [col for col in df.columns if col.lower().replace(' ','') in (
-            'mobilenumber','mobile','mobile_no','mobileno','contactnumber'
+        mobile_candidates = [col for col in df.columns if col.lower().replace(' ', '') in (
+            'mobilenumber', 'mobile', 'mobile_no', 'mobileno', 'contactnumber'
         )]
         mobile_col = mobile_candidates[0] if mobile_candidates else None
 
@@ -192,14 +196,14 @@ def process_file(
             df[mobile_col] = [clean_mobile_number(raw, idx, logs) for idx, raw in df[mobile_col].items()]
 
         # Name cleanup
-        name_candidates = [col for col in df.columns if col.lower().replace(' ','') in (
-            'customername','customer','buyername','name'
+        name_candidates = [col for col in df.columns if col.lower().replace(' ', '') in (
+            'customername', 'customer', 'buyername', 'name'
         )]
         if name_candidates:
             name_col = name_candidates[0]
             df[name_col] = [clean_customer_name(raw, idx, logs) for idx, raw in df[name_col].items()]
 
-        # Date formatting — detect by name + sample values
+        # Date formatting
         date_candidates = [col for col in df.columns if "date" in col.lower()]
         for col in df.columns:
             sample_vals = df[col].dropna().astype(str).head(10)
@@ -209,28 +213,38 @@ def process_file(
         for dcol in date_candidates:
             df = format_date_column(df, dcol)
 
-        # Blocklist filtering
+        # ====================================================
+        # 🚀 Blocklist filtering (improved logic)
+        # ====================================================
         if apply_blocklist and mobile_col:
             blocklist_df = load_blocklist(blocklist_file)
             blocklist_df["DateAdded"] = pd.to_datetime(blocklist_df["DateAdded"], errors="coerce")
+
             if cutoff_date:
                 cutoff_dt = pd.to_datetime(cutoff_date)
                 blocklist_df = blocklist_df[blocklist_df["DateAdded"] <= cutoff_dt]
 
-            blocklist = blocklist_df["Mobile"].astype(str).tolist()
-            flagged = df[df[mobile_col].astype(str).isin(blocklist)]
+            existing_mobiles = set(blocklist_df["Mobile"].astype(str))
+            flagged = df[df[mobile_col].astype(str).isin(existing_mobiles)]
 
+            # Log blocklist matches
             for idx, row in flagged.iterrows():
                 logs.append({"index": idx, "original": row[mobile_col], "cleaned": "", "reason": "blocklist_match"})
 
+            # Save flagged list
             flagged[mobile_col].to_csv(flagged_log_path, index=False, header=False)
 
-            df = df[~df[mobile_col].astype(str).isin(blocklist)]
-            new_numbers = len(flagged)
+            # ✅ Remove blocked numbers from main DataFrame
+            df = df[~df[mobile_col].astype(str).isin(existing_mobiles)]
 
+            # Identify *new* mobile numbers not already in blocklist
+            new_mobiles = set(df[mobile_col].astype(str)) - existing_mobiles
+            new_numbers = len(new_mobiles)
+
+            # ✅ Append only new numbers to blocklist
             if new_numbers > 0:
                 new_entries = pd.DataFrame({
-                    "Mobile": flagged[mobile_col].astype(str).drop_duplicates(),
+                    "Mobile": list(new_mobiles),
                     "DateAdded": datetime.today().strftime("%Y-%m-%d")
                 })
                 new_entries.to_csv(blocklist_file, mode="a", index=False, header=False)
@@ -246,19 +260,19 @@ def process_file(
     with open(flagged_log_path, "w", encoding="utf-8") as f:
         f.write("index,original,cleaned,reason\n")
         for entry in logs:
-            idx = entry.get("index","")
-            orig = str(entry.get("original","")).replace('\n',' ').replace(',',' ')
-            cleaned = entry.get("cleaned", entry.get("cleaned_mobile",""))
-            reason = entry.get("reason","")
+            idx = entry.get("index", "")
+            orig = str(entry.get("original", "")).replace('\n', ' ').replace(',', ' ')
+            cleaned = entry.get("cleaned", entry.get("cleaned_mobile", ""))
+            reason = entry.get("reason", "")
             f.write(f"{idx},{orig},{cleaned},{reason}\n")
 
     # Summary counts
     name_fixes = sum(1 for log in logs if log.get("reason") == "name_cleaned")
     mobile_fixes = sum(1 for log in logs if log.get("reason") == "mobile_cleaned")
     invalid_cases = sum(1 for log in logs if log.get("reason") in (
-        "empty_or_invalid_input","numeric","no_vowels","too_short",
-        "purely_numeric_after_removal","no_valid_characters_after_cleaning",
-        "mobile_is_na","too_short_digits","blocklist_match"
+        "empty_or_invalid_input", "numeric", "no_vowels", "too_short",
+        "purely_numeric_after_removal", "no_valid_characters_after_cleaning",
+        "mobile_is_na", "too_short_digits", "blocklist_match"
     ))
 
     return {
