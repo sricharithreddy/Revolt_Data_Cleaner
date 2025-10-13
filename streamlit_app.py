@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-from Revolt_Export_Formatter import process_file, load_blocklist  # updated import
+from Revoltv11 import process_file, load_blocklist  # ✅ fixed import
 import subprocess
 import glob
 
+# ====================================================
+# GitHub Auto-Commit for Blocklist
+# ====================================================
 def commit_blocklist_to_github():
     try:
         token = st.secrets["GITHUB_TOKEN"]
@@ -30,6 +33,9 @@ def commit_blocklist_to_github():
     except Exception as e:
         st.warning(f"⚠️ Could not commit blocklist: {e}")
 
+# ====================================================
+# Auto-cleanup old files
+# ====================================================
 def cleanup_old_files(keep_files):
     patterns = ["uploaded_*.xlsx", "cleaned_*.xlsx", "flagged_*.txt"]
     for pattern in patterns:
@@ -40,13 +46,22 @@ def cleanup_old_files(keep_files):
                 except Exception:
                     pass
 
+# ====================================================
+# Date Helper for Filenames
+# ====================================================
 def format_today_for_filename():
     today = datetime.today()
-    return today.strftime("%d %b").lstrip("0")
+    return today.strftime("%d %b").lstrip("0")  # e.g. "1 Oct"
 
+# ====================================================
+# Page Config
+# ====================================================
 st.set_page_config(page_title="Revolt Data Processor", layout="wide")
 
-col1, col2, col3 = st.columns([1,2,1])
+# ====================================================
+# Revolt Branding (Logo + Title)
+# ====================================================
+col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if os.path.exists("revolt_logo.png"):
         st.image("revolt_logo.png", width=160)
@@ -54,10 +69,13 @@ with col2:
 
 st.divider()
 
+# ====================================================
+# File Upload + Blocklist Options
+# ====================================================
 with st.container(border=True):
     st.markdown("### 📂 Upload Excel File")
 
-    uploaded_file = st.file_uploader("Choose a file", type=["xlsx","xls","csv"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Choose a file", type=["xlsx", "xls", "csv"], label_visibility="collapsed")
 
     st.markdown("### ⚙️ Blocklist Options")
     use_blocklist = st.checkbox("Apply Blocklist Filtering", value=True)
@@ -65,6 +83,9 @@ with st.container(border=True):
     if use_blocklist:
         cutoff_date = st.date_input("Blocklist Cutoff Date", value=datetime.today() - timedelta(days=1))
 
+# ====================================================
+# Run Processing
+# ====================================================
 if uploaded_file is not None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     input_path = f"uploaded_{timestamp}.xlsx"
@@ -78,8 +99,18 @@ if uploaded_file is not None:
     if st.button("🚀 Run Cleaning", use_container_width=True, type="primary"):
         st.info("⚡ Running cleaner, please wait...")
 
-        result = process_file(input_path, cleaned_output, flagged_log, apply_blocklist=use_blocklist, cutoff_date=cutoff_date)
+        # Run backend cleaning process
+        result = process_file(
+            input_path,
+            cleaned_output,
+            flagged_log,
+            apply_blocklist=use_blocklist,
+            cutoff_date=cutoff_date
+        )
 
+        # ====================================================
+        # Process Summary
+        # ====================================================
         with st.container(border=True):
             st.subheader("📊 Process Summary")
 
@@ -100,6 +131,9 @@ if uploaded_file is not None:
             c2.metric("📱 Mobiles Fixed", result["mobile_fixes"])
             c3.metric("⚠️ Invalid Cases", result["invalid_cases"])
 
+        # ====================================================
+        # Downloads
+        # ====================================================
         with st.container(border=True):
             st.subheader("⬇️ Downloads")
             d1, d2, d3 = st.columns(3)
@@ -118,10 +152,16 @@ if uploaded_file is not None:
                 with open(blocklist_file, "rb") as f:
                     st.download_button("⛔ Blocklist", f, file_name=f"blocklist {pretty_date}.csv", use_container_width=True)
 
+        # ====================================================
+        # GitHub Auto-Commit for Blocklist
+        # ====================================================
         if use_blocklist:
             if result["new_numbers"] > 0:
                 commit_blocklist_to_github()
             else:
                 st.info("ℹ️ No new blocklist entries to commit, skipping GitHub push.")
 
+        # ====================================================
+        # Cleanup
+        # ====================================================
         cleanup_old_files([input_path, cleaned_output, flagged_log, blocklist_file])
